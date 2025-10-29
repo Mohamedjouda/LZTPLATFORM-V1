@@ -12,7 +12,9 @@
     "@google/genai": "^1.27.0",
     "react-dom": "^19.2.0",
     "react": "^19.2.0",
-    "@supabase/supabase-js": "^2.76.1"
+    "@supabase/supabase-js": "^2.76.1",
+    "vite": "^7.1.12",
+    "@vitejs/plugin-react": "^5.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

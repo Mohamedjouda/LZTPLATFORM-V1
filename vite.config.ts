@@ -1,23 +1,16 @@
-import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-    return {
-      server: {
-        port: 3000,
-        host: '0.0.0.0',
-      },
-      plugins: [react()],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
-      resolve: {
-        alias: {
-          '@': path.resolve(__dirname, '.'),
-        }
-      }
-    };
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    // By default, Vite empties the outDir on build.
+    // We are disabling this behavior because your hosting panel (aaPanel)
+    // may place a protected `.user.ini` file in the output directory (`dist`).
+    // This protected file causes the build to fail when Vite tries to delete it.
+    // By setting `emptyOutDir` to `false`, Vite will build without trying to
+    // clear the directory first, successfully working around the permission error.
+    emptyOutDir: false,
+  },
 });
