@@ -4,6 +4,7 @@ import mysql from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
+const apiRouter = express.Router(); // Create a router
 const port = 3001;
 
 // --- Database Configuration ---
@@ -47,8 +48,8 @@ const parseJsonFields = (item) => {
 
 // --- API Routes ---
 
-// GET /api/settings/:key
-app.get('/api/settings/:key', async (req, res) => {
+// GET /settings/:key
+apiRouter.get('/settings/:key', async (req, res) => {
     try {
         const [rows] = await pool.execute('SELECT `value` FROM `settings` WHERE `key` = ?', [req.params.key]);
         if (rows.length > 0) {
@@ -62,8 +63,8 @@ app.get('/api/settings/:key', async (req, res) => {
     }
 });
 
-// POST /api/settings
-app.post('/api/settings', async (req, res) => {
+// POST /settings
+apiRouter.post('/settings', async (req, res) => {
     const { key, value } = req.body;
     try {
         await pool.execute('INSERT INTO `settings` (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?', [key, value, value]);
@@ -74,8 +75,8 @@ app.post('/api/settings', async (req, res) => {
     }
 });
 
-// GET /api/games
-app.get('/api/games', async (req, res) => {
+// GET /games
+apiRouter.get('/games', async (req, res) => {
     try {
         const [rows] = await pool.execute('SELECT * FROM `games` ORDER BY `id`');
         const games = rows.map(parseJsonFields);
@@ -86,8 +87,8 @@ app.get('/api/games', async (req, res) => {
     }
 });
 
-// POST /api/games (Upsert)
-app.post('/api/games', async (req, res) => {
+// POST /games (Upsert)
+apiRouter.post('/games', async (req, res) => {
     const game = req.body;
     try {
         const columnsToUpdate = {};
@@ -115,8 +116,8 @@ app.post('/api/games', async (req, res) => {
     }
 });
 
-// GET /api/games/:gameId/listings
-app.get('/api/games/:gameId/listings', async (req, res) => {
+// GET /games/:gameId/listings
+apiRouter.get('/games/:gameId/listings', async (req, res) => {
     const { gameId } = req.params;
     const { view, sort, page = 1, limit = 25, filters } = req.query;
 
@@ -154,8 +155,8 @@ app.get('/api/games/:gameId/listings', async (req, res) => {
     }
 });
 
-// GET /api/games/:gameId/listings/ids
-app.get('/api/games/:gameId/listings/ids', async (req, res) => {
+// GET /games/:gameId/listings/ids
+apiRouter.get('/games/:gameId/listings/ids', async (req, res) => {
     const { gameId } = req.params;
     const { view, filters } = req.query;
     try {
@@ -175,8 +176,8 @@ app.get('/api/games/:gameId/listings/ids', async (req, res) => {
     }
 });
 
-// GET /api/games/:gameId/listings/export
-app.get('/api/games/:gameId/listings/export', async (req, res) => {
+// GET /games/:gameId/listings/export
+apiRouter.get('/games/:gameId/listings/export', async (req, res) => {
     // Similar to listings getter but without pagination
     const { gameId } = req.params;
     const { view, sort, filters } = req.query;
@@ -196,8 +197,8 @@ app.get('/api/games/:gameId/listings/export', async (req, res) => {
 });
 
 
-// POST /api/games/:gameId/listings/by-ids
-app.post('/api/games/:gameId/listings/by-ids', async (req, res) => {
+// POST /games/:gameId/listings/by-ids
+apiRouter.post('/games/:gameId/listings/by-ids', async (req, res) => {
     const { gameId } = req.params;
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -213,8 +214,8 @@ app.post('/api/games/:gameId/listings/by-ids', async (req, res) => {
     }
 });
 
-// PATCH /api/games/:gameId/listings/bulk-update
-app.patch('/api/games/:gameId/listings/bulk-update', async (req, res) => {
+// PATCH /games/:gameId/listings/bulk-update
+apiRouter.patch('/games/:gameId/listings/bulk-update', async (req, res) => {
     const { gameId } = req.params;
     const { itemIds, updates } = req.body;
     if (!itemIds || itemIds.length === 0) return res.status(400).json({ message: 'No item IDs provided.' });
@@ -230,8 +231,8 @@ app.patch('/api/games/:gameId/listings/bulk-update', async (req, res) => {
     }
 });
 
-// POST /api/listings/bulk-upsert
-app.post('/api/listings/bulk-upsert', async (req, res) => {
+// POST /listings/bulk-upsert
+apiRouter.post('/listings/bulk-upsert', async (req, res) => {
     const listings = req.body;
     if (!listings || listings.length === 0) return res.status(400).json({ message: 'No listings provided.' });
     
@@ -259,8 +260,8 @@ app.post('/api/listings/bulk-upsert', async (req, res) => {
     }
 });
 
-// GET /api/games/:gameId/dashboard/counts
-app.get('/api/games/:gameId/dashboard/counts', async (req, res) => {
+// GET /games/:gameId/dashboard/counts
+apiRouter.get('/games/:gameId/dashboard/counts', async (req, res) => {
     const { gameId } = req.params;
     try {
         const [[{ count: active }]] = await pool.execute('SELECT COUNT(*) as count FROM `listings` WHERE `game_id` = ? AND `is_hidden` = FALSE AND `is_archived` = FALSE', [gameId]);
@@ -273,8 +274,8 @@ app.get('/api/games/:gameId/dashboard/counts', async (req, res) => {
     }
 });
 
-// GET /api/games/:gameId/dashboard/logs
-app.get('/api/games/:gameId/dashboard/logs', async (req, res) => {
+// GET /games/:gameId/dashboard/logs
+apiRouter.get('/games/:gameId/dashboard/logs', async (req, res) => {
     const { gameId } = req.params;
     try {
         const [fetchLogs] = await pool.execute('SELECT * FROM `fetch_logs` WHERE `game_id` = ? ORDER BY `created_at` DESC LIMIT 10', [gameId]);
@@ -286,8 +287,8 @@ app.get('/api/games/:gameId/dashboard/logs', async (req, res) => {
     }
 });
 
-// POST /api/logs/fetch
-app.post('/api/logs/fetch', async (req, res) => {
+// POST /logs/fetch
+apiRouter.post('/logs/fetch', async (req, res) => {
     const log = req.body;
     try {
         const id = uuidv4();
@@ -300,8 +301,8 @@ app.post('/api/logs/fetch', async (req, res) => {
     }
 });
 
-// POST /api/logs/check
-app.post('/api/logs/check', async (req, res) => {
+// POST /logs/check
+apiRouter.post('/logs/check', async (req, res) => {
     const log = req.body;
     try {
         const id = uuidv4();
@@ -314,8 +315,8 @@ app.post('/api/logs/check', async (req, res) => {
     }
 });
 
-// PATCH /api/logs/check/:logId
-app.patch('/api/logs/check/:logId', async (req, res) => {
+// PATCH /logs/check/:logId
+apiRouter.patch('/logs/check/:logId', async (req, res) => {
     const { logId } = req.params;
     const updates = req.body;
     try {
@@ -329,8 +330,8 @@ app.patch('/api/logs/check/:logId', async (req, res) => {
     }
 });
 
-// GET /api/games/:gameId/listings/for-check
-app.get('/api/games/:gameId/listings/for-check', async (req, res) => {
+// GET /games/:gameId/listings/for-check
+apiRouter.get('/games/:gameId/listings/for-check', async (req, res) => {
     const { gameId } = req.params;
     const { cursor = 0, limit = 50 } = req.query;
     try {
@@ -345,7 +346,14 @@ app.get('/api/games/:gameId/listings/for-check', async (req, res) => {
     }
 });
 
+
 // --- Server Start ---
+// Mount the router to handle both /api prefixed and non-prefixed routes.
+// This makes the backend compatible with Nginx configs that either strip the /api prefix or not.
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
+
+
 app.listen(port, () => {
     console.log(`Server listening at http://localhost:${port}`);
 });
