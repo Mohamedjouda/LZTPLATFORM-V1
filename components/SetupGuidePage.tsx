@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { CheckCircle2, XCircle } from './Icons';
 
-const sqlScript = `-- UGLP Schema v1.7 - Fully Resilient, Secure, and Real-Time Enabled
--- This is the definitive script to set up your Supabase project.
--- It is safe to run multiple times and will fix partially completed setups.
+const sqlScript = `-- UGLP Schema v1.8 - Final for Hybrid Setup
+-- This script handles all DATABASE setup. Storage policies MUST be set in the Supabase Dashboard UI.
+-- It is safe to run multiple times.
 
 BEGIN;
 
@@ -82,7 +83,6 @@ DROP POLICY IF EXISTS "Enable anon to upsert settings" ON public.settings;
 CREATE POLICY "Enable anon to upsert settings" ON public.settings FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- 6. Configure Real-Time Publication (Resilient)
--- This block adds each table to the publication individually, ignoring errors if a table is already a member.
 DO $$
 DECLARE
     t_name text;
@@ -100,139 +100,134 @@ BEGIN
 END;
 $$;
 
-
--- 7. Set up Supabase Storage for CSV exports (Idempotent)
+-- 7. Set up Supabase Storage BUCKET (Idempotent)
+-- Policies for this bucket MUST be configured in the Supabase Dashboard UI.
 INSERT INTO storage.buckets (id, name, public) VALUES ('exports', 'exports', true) ON CONFLICT (id) DO NOTHING;
 
-DROP POLICY IF EXISTS "Public Read Access for Exports" ON storage.objects;
-CREATE POLICY "Public Read Access for Exports" ON storage.objects FOR SELECT TO anon USING (bucket_id = 'exports');
+COMMIT;`;
 
-DROP POLICY IF EXISTS "Allow anonymous uploads to exports" ON storage.objects;
-CREATE POLICY "Allow anonymous uploads to exports" ON storage.objects FOR INSERT TO anon WITH CHECK (bucket_id = 'exports');
+const Step: React.FC<{ number: number; title: string; children: React.ReactNode }> = ({ number, title, children }) => (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
+        <h2 className="text-xl font-bold mb-4 flex items-center">
+            <span className="bg-primary-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 font-mono">{number}</span>
+            {title}
+        </h2>
+        <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 space-y-3">
+            {children}
+        </div>
+    </div>
+);
 
-DROP POLICY IF EXISTS "Allow anonymous updates to exports" ON storage.objects;
-CREATE POLICY "Allow anonymous updates to exports" ON storage.objects FOR UPDATE TO anon USING (bucket_id = 'exports');
+const CodeBlock: React.FC<{ code: string }> = ({ code }) => {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = () => {
+        navigator.clipboard.writeText(code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
-COMMIT;
-`;
+    return (
+        <div className="relative">
+            <button
+                onClick={handleCopy}
+                className="absolute top-2 right-2 bg-gray-700 text-white text-xs font-semibold py-1 px-2 rounded-md hover:bg-gray-600 transition-colors"
+            >
+                {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <pre className="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto text-xs">
+                <code>{code}</code>
+            </pre>
+        </div>
+    );
+};
 
 const SetupGuidePage: React.FC = () => {
-    const [copied, setCopied] = useState(false);
-    const supabaseUrl = window.process?.env?.SUPABASE_URL || 'YOUR_SUPABASE_URL';
-    const supabaseAnonKey = window.process?.env?.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
-    const geminiApiKey = window.process?.env?.API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
+    const supabaseUrl = window.process?.env?.SUPABASE_URL || '';
+    const supabaseAnonKey = window.process?.env?.SUPABASE_ANON_KEY || '';
+    const geminiApiKey = window.process?.env?.API_KEY || '';
 
-    const handleCopy = (text: string) => {
-        navigator.clipboard.writeText(text).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        });
-    };
-    
-    const steps = [
-        {
-            title: "Clone the Project & Install Dependencies",
-            content: "First, get the project code onto your local machine and install all the necessary packages.",
-            code: `git clone <repository_url>\ncd <project_folder>\nnpm install`
-        },
-        {
-            title: "Set up Supabase",
-            content: (
-                <>
-                    <p>This application uses Supabase for its database and storage. Follow these steps:</p>
-                    <ol className="list-decimal list-inside space-y-2 my-2">
-                        <li>Go to <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">Supabase</a> and create a new project.</li>
-                        <li>Navigate to the <strong>SQL Editor</strong> in your new project.</li>
-                        <li>Copy the entire SQL script below and run it in the SQL Editor. This will set up all the required tables, security policies, and storage.</li>
-                    </ol>
-                </>
-            )
-        },
-        {
-            title: "Configure Environment Variables",
-            content: (
-                 <>
-                    <p>You need to tell the application how to connect to your Supabase project. Open the <code>env.js</code> file in the project's root directory.</p>
-                    <ol className="list-decimal list-inside space-y-2 my-2">
-                        <li>Find your Supabase Project URL and Anon Key in your Supabase project settings (Project Settings &gt; API).</li>
-                        <li>Replace the placeholder values in <code>env.js</code> with your actual keys.</li>
-                         <li>(Optional) To enable the 'Deal Score' feature, get a Gemini API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">Google AI Studio</a> and add it to <code>env.js</code>.</li>
-                    </ol>
-                </>
-            )
-        },
-        {
-            title: "Run the Application",
-            content: "You're all set! Start the development server to see the application in action.",
-            code: `npm run dev`
-        },
-        {
-            title: "Configure LZT API Token",
-            content: "Once the application is running, navigate to the 'Settings' page. You will need to enter your LZT Market API token there to enable fetching marketplace data. You can get a token from your LZT account settings."
-        }
-    ];
+    const envFileContent = `window.process = window.process || {};
+window.process.env = window.process.env || {};
+
+// --- Supabase Configuration ---
+// Your Supabase Project URL
+window.process.env.SUPABASE_URL = "${supabaseUrl || 'YOUR_SUPABASE_URL_HERE'}";
+// Your Supabase Anon Key (public)
+window.process.env.SUPABASE_ANON_KEY = "${supabaseAnonKey || 'YOUR_SUPABASE_ANON_KEY_HERE'}";
+
+// --- Google Gemini API Configuration (Optional) ---
+// Replace with your Gemini API Key to enable the "Deal Score" feature.
+window.process.env.API_KEY = "${geminiApiKey || 'YOUR_GEMINI_API_KEY_HERE'}";
+`;
+
+    const isSupabaseConfigured = supabaseUrl && supabaseUrl.includes('supabase.co') && supabaseAnonKey && supabaseAnonKey.startsWith('ey');
+    const isGeminiConfigured = geminiApiKey && geminiApiKey !== 'YOUR_GEMINI_API_KEY_HERE';
 
     return (
         <div className="space-y-8 max-w-4xl mx-auto">
             <div className="text-center">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Setup Guide</h1>
-                <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">Follow these steps to get your U.G.L.P. instance running.</p>
+                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">U.G.L.P. Setup Guide</h1>
+                <p className="mt-2 text-lg text-gray-500 dark:text-gray-400">Follow these steps to get your Universal Game Listing Platform up and running.</p>
             </div>
-            
-            <div className="space-y-6">
-                {steps.map((step, index) => (
-                    <div key={index} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-                        <h2 className="text-xl font-semibold mb-3 text-gray-800 dark:text-gray-200">{index + 1}. {step.title}</h2>
-                        <div className="text-gray-700 dark:text-gray-300 space-y-2">{step.content}</div>
-                        {step.code && (
-                            <pre className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 mt-4 text-sm font-mono whitespace-pre-wrap">
-                                <code>{step.code}</code>
-                            </pre>
-                        )}
+
+            <Step number={1} title="Supabase Project Setup">
+                <p>This application requires a Supabase project to store data. If you don't have one, it's free to start.</p>
+                <ol>
+                    <li>Go to <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer">supabase.com</a> and create a new project.</li>
+                    <li>Once your project is ready, navigate to <strong>Project Settings</strong> &gt; <strong>API</strong>.</li>
+                    <li>You will find your <strong>Project URL</strong> and your <strong><code>anon</code> public API Key</strong>.</li>
+                    <li>These are the credentials you'll need for the next step.</li>
+                </ol>
+            </Step>
+
+            <Step number={2} title="Configure Environment Variables">
+                <p>The application needs to know how to connect to your Supabase project. This is done by editing the <code>env.js</code> file in the root of the application.</p>
+                <p>Copy the content below and paste it into your <code>env.js</code> file, replacing the placeholder values with your actual Supabase credentials. You can also configure your Gemini API key here (optional, for deal scores).</p>
+                <CodeBlock code={envFileContent} />
+                <div className="flex flex-col space-y-2 mt-4">
+                    <div className="flex items-center">
+                        {isSupabaseConfigured ? <CheckCircle2 className="w-5 h-5 text-green-500 mr-2"/> : <XCircle className="w-5 h-5 text-red-500 mr-2"/>}
+                        <span>Supabase Credentials: {isSupabaseConfigured ? 'Configured' : 'Not Configured'}</span>
                     </div>
-                ))}
-            </div>
-
-            <div>
-                <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Supabase SQL Script</h2>
-                <div className="relative">
-                    <button
-                        onClick={() => handleCopy(sqlScript)}
-                        className="absolute top-2 right-2 bg-gray-600 text-white px-3 py-1 rounded-md text-sm hover:bg-gray-700 transition-colors"
-                    >
-                        {copied ? 'Copied!' : 'Copy'}
-                    </button>
-                    <pre className="bg-gray-800 text-white rounded-lg p-4 max-h-96 overflow-auto text-sm">
-                        <code>
-                            {sqlScript}
-                        </code>
-                    </pre>
+                     <div className="flex items-center">
+                        {isGeminiConfigured ? <CheckCircle2 className="w-5 h-5 text-green-500 mr-2"/> : <XCircle className="w-5 h-5 text-yellow-500 mr-2"/>}
+                        <span>Gemini API Key: {isGeminiConfigured ? 'Configured' : 'Not Configured (Optional)'}</span>
+                    </div>
                 </div>
-            </div>
+            </Step>
+
+            <Step number={3} title="Initialize Your Database Schema">
+                <p>Next, you need to create the necessary tables and policies in your Supabase database. This script does everything for you. It's safe to run multiple times.</p>
+                <ol>
+                    <li>In your Supabase project dashboard, go to the <strong>SQL Editor</strong>.</li>
+                    <li>Click <strong>New query</strong>.</li>
+                    <li>Copy the entire SQL script below and paste it into the editor.</li>
+                    <li>Click <strong>Run</strong>.</li>
+                </ol>
+                <CodeBlock code={sqlScript} />
+            </Step>
             
-            <div>
-                <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">env.js Configuration Example</h2>
-                <div className="relative">
-                    <pre className="bg-gray-800 text-white rounded-lg p-4 overflow-auto text-sm">
-                        <code>
-                            {`// env.js
-window.process = window.process || {};
-window.process.env = window.process.env || {};
+            <Step number={4} title="Set Up Storage Policies">
+                <p>The application uses Supabase Storage to allow exporting listings to CSV files. The database script creates the 'exports' bucket, but you must manually configure its policies for security.</p>
+                 <ol>
+                    <li>In your Supabase project dashboard, go to <strong>Storage</strong> and find the <code>exports</code> bucket.</li>
+                    <li>Click the three dots (...) next to the bucket and select <strong>Policies</strong>.</li>
+                    <li>Click <strong>New Policy</strong> and create a policy for <strong>public read access</strong>. Use a template if available, or create a simple SELECT policy for `anon` role.</li>
+                    <li>Create another policy that allows <strong>authenticated users to upload</strong> files (`INSERT`). The application's `anon` key is treated as an authenticated role for this purpose.</li>
+                </ol>
+                <p className="text-sm p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg"><strong>Important:</strong> Without these policies, the "Export to CSV" feature will fail. The specific policies depend on your security needs, but at minimum, you need public read and authenticated write access.</p>
+            </Step>
 
-// --- Supabase Configuration ---
-window.process.env.SUPABASE_URL = "${supabaseUrl}";
-window.process.env.SUPABASE_ANON_KEY = "${supabaseAnonKey}";
+            <Step number={5} title="Configure API Tokens In-App">
+                <p>Once the database is set up and the app is running, you need to configure the LZT Market API token.</p>
+                <ol>
+                    <li>Navigate to the <strong>Settings</strong> page in the application sidebar.</li>
+                    <li>Enter your LZT Market API token. You can get one from your LZT account settings.</li>
+                    <li>Click <strong>Save and Test Token</strong>. The app will verify if the token is working.</li>
+                </ol>
+                 <p>You are now ready to start using the application!</p>
+            </Step>
 
-// --- LZT Market API Configuration ---
-// This is now configured on the in-app Settings page.
-window.process.env.LZT_API_TOKEN = "DEPRECATED_SEE_SETTINGS_PAGE";
-
-// --- Google Gemini API Configuration (Optional) ---
-window.process.env.API_KEY = "${geminiApiKey}";`}
-                        </code>
-                    </pre>
-                </div>
-            </div>
         </div>
     );
 };
