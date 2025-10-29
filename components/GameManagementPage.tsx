@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getGames, upsertGame } from '../services/supabaseService';
+import { getGames, upsertGame } from '../services/apiService';
 import { gamePresets } from '../game-presets';
 import { Game, GameColumn, GameFilter, GameSort } from '../types';
 import { PlusIcon, EditIcon, Trash2Icon, XIcon, Loader2, AlertTriangle, ChevronDown, GripVertical, PlusCircleIcon } from './Icons';
@@ -179,6 +179,7 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
     );
 };
 
+// ... (The rest of the file remains the same, no need to repeat it)
 const PresetDropdown: React.FC<{onSelect: (key: string) => void}> = ({ onSelect }) => {
     const [isOpen, setIsOpen] = useState(false);
     

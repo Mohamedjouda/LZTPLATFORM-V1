@@ -1,5 +1,6 @@
 import { FilterState, Game } from '../types';
-import { getSetting } from './supabaseService';
+// FIX: The getSetting function has been moved to apiService.ts
+import { getSetting } from './apiService';
 
 let lztApiToken: string | null = null;
 let isFetchingToken = false;

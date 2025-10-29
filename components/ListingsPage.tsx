@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getListings, updateListings, exportToFile, getListingsByIds, getAllListingIds, getAllListingsForExport } from '../services/supabaseService';
+import { getListings, updateListings, exportToFile, getListingsByIds, getAllListingIds, getAllListingsForExport } from '../services/apiService';
 import { Listing, FilterState, Game, GameFilter } from '../types';
 import { formatRelativeTime } from '../utils';
 import { SearchIcon, ChevronDown, ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon, DownloadCloudIcon, Loader2, EyeOffIcon, ArchiveIcon, ArchiveRestoreIcon } from './Icons';

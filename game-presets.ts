@@ -29,7 +29,7 @@ export const allAccountsPreset: Omit<Game, 'id' | 'created_at'> = {
   sorts: [
     { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
     { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
-    { id: 'price_to_down', label: 'Price: High to Low', column: 'price', ascending: false },
+    { id: 'price_to_down', label: 'Price: High to Low', column: 'price', ascending: false }
   ],
 };
 
@@ -63,12 +63,12 @@ export const steamPreset: Omit<Game, 'id' | 'created_at'> = {
     { id: 'lmin', label: 'Level', type: 'number_range', is_advanced: false, param_name_min: 'lmin', param_name_max: 'lmax' },
     { id: 'gmin', label: 'Games', type: 'number_range', is_advanced: true, param_name_min: 'gmin', param_name_max: 'gmax' },
     { id: 'balance_min', label: 'Balance', type: 'number_range', is_advanced: true, param_name_min: 'balance_min', param_name_max: 'balance_max' },
-    { id: 'game_int', label: 'Has Game (ID)', type: 'text', is_advanced: true, param_name: 'game[]', placeholder: "e.g., 730" },
+    { id: 'game_int', label: 'Has Game (ID)', type: 'text', is_advanced: true, param_name: 'game[]', placeholder: "e.g., 730" }
   ],
   sorts: [
     { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
     { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
-    { id: 'price_to_down', label: 'Price: High to Low', column: 'price', ascending: false },
+    { id: 'price_to_down', label: 'Price: High to Low', column: 'price', ascending: false }
   ],
 };
 
@@ -102,13 +102,13 @@ export const fortnitePreset: Omit<Game, 'id' | 'created_at'> = {
     { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
     { id: 'lmin', label: 'Level', type: 'number_range', is_advanced: false, param_name_min: 'lmin', param_name_max: 'lmax' },
     { id: 'vbmin', label: 'V-Bucks', type: 'number_range', is_advanced: false, param_name_min: 'vbmin', param_name_max: 'vbmax' },
-    { id: 'smin', label: 'Skins Count', type: 'number_range', is_advanced: true, param_name_min: 'smin', param_name_max: 'smax' },
+    { id: 'smin', label: 'Skins Count', type: 'number_range', is_advanced: true, param_name_min: 'smin', param_name_max: 'smax' }
   ],
   sorts: [
     { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
     { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
     { id: 'price_to_down', label: 'Price: High to Low', column: 'price', ascending: false },
-    { id: 'deal_score', label: 'Deal Score', column: 'deal_score', ascending: false },
+    { id: 'deal_score', label: 'Deal Score', column: 'deal_score', ascending: false }
   ],
 };
 
@@ -141,12 +141,12 @@ export const mihoyoPreset: Omit<Game, 'id' | 'created_at'> = {
         { id: 'genshin_level_min', label: 'Genshin Level', type: 'number_range', is_advanced: true, param_name_min: 'genshin_level_min', param_name_max: 'genshin_level_max'},
         { id: 'genshin_legendary_min', label: 'Genshin 5*', type: 'number_range', is_advanced: false, param_name_min: 'genshin_legendary_min', param_name_max: 'genshin_legendary_max'},
         { id: 'honkai_level_min', label: 'Honkai Level', type: 'number_range', is_advanced: true, param_name_min: 'honkai_level_min', param_name_max: 'honkai_level_max'},
-        { id: 'honkai_legendary_min', label: 'Honkai 5*', type: 'number_range', is_advanced: true, param_name_min: 'honkai_legendary_min', param_name_max: 'honkai_legendary_max'},
+        { id: 'honkai_legendary_min', label: 'Honkai 5*', type: 'number_range', is_advanced: true, param_name_min: 'honkai_legendary_min', param_name_max: 'honkai_legendary_max'}
     ],
     sorts: [
         { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
         { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
-        { id: 'deal_score', label: 'Deal Score', column: 'deal_score', ascending: false },
+        { id: 'deal_score', label: 'Deal Score', column: 'deal_score', ascending: false }
     ],
 };
 
@@ -178,11 +178,11 @@ export const riotPreset: Omit<Game, 'id' | 'created_at'> = {
     { id: 'title', label: 'Search', type: 'text', is_advanced: false, param_name: 'title' },
     { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
     { id: 'valorant_level_min', label: 'Valorant Level', type: 'number_range', is_advanced: true, param_name_min: 'valorant_level_min', param_name_max: 'valorant_level_max' },
-    { id: 'lol_level_min', label: 'LoL Level', type: 'number_range', is_advanced: true, param_name_min: 'lol_level_min', param_name_max: 'lol_level_max' },
+    { id: 'lol_level_min', label: 'LoL Level', type: 'number_range', is_advanced: true, param_name_min: 'lol_level_min', param_name_max: 'lol_level_max' }
   ],
   sorts: [
     { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-    { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+    { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
   ],
 };
 
@@ -212,12 +212,12 @@ const wotPreset = {
     { id: 'title', label: 'Search', type: 'text', is_advanced: false, param_name: 'title' },
     { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
     { id: 'battles_min', label: 'Battles', type: 'number_range', is_advanced: false, param_name_min: 'battles_min', param_name_max: 'battles_max' },
-    { id: 'wn8_min', label: 'WN8 Rating', type: 'number_range', is_advanced: true, param_name_min: 'wn8_min', param_name_max: 'wn8_max' },
+    { id: 'wn8_min', label: 'WN8 Rating', type: 'number_range', is_advanced: true, param_name_min: 'wn8_min', param_name_max: 'wn8_max' }
   ],
   sorts: [
     { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
     { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
-    { id: 'deal_score', label: 'Deal Score', column: 'deal_score', ascending: false },
+    { id: 'deal_score', label: 'Deal Score', column: 'deal_score', ascending: false }
   ],
 };
 
@@ -265,11 +265,11 @@ export const gamePresets = {
         { id: 'title', label: 'Search', type: 'text', is_advanced: false, param_name: 'title' },
         { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
         { id: 'level_min', label: 'Level', type: 'number_range', is_advanced: true, param_name_min: 'level_min', param_name_max: 'level_max' },
-        { id: 'version', label: 'Version', type: 'select', is_advanced: false, param_name: 'version[]', options: ['standard', 'left_behind', 'prepare_for_escape', 'edge_of_darkness', 'unheard_edition'] },
+        { id: 'version', label: 'Version', type: 'select', is_advanced: false, param_name: 'version[]', options: ['standard', 'left_behind', 'prepare_for_escape', 'edge_of_darkness', 'unheard_edition'] }
     ],
     sorts: [
         { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-        { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+        { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
     ],
   },
   socialclub: {
@@ -299,11 +299,11 @@ export const gamePresets = {
       { id: 'title', label: 'Search', type: 'text', is_advanced: false, param_name: 'title' },
       { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
       { id: 'level_min', label: 'Level', type: 'number_range', is_advanced: true, param_name_min: 'level_min', param_name_max: 'level_max' },
-      { id: 'cash_min', label: 'Cash', type: 'number_range', is_advanced: true, param_name_min: 'cash_min', param_name_max: 'cash_max' },
+      { id: 'cash_min', label: 'Cash', type: 'number_range', is_advanced: true, param_name_min: 'cash_min', param_name_max: 'cash_max' }
     ],
     sorts: [
       { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-      { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+      { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
     ],
   },
   minecraft: {
@@ -331,11 +331,11 @@ export const gamePresets = {
       filters: [
           { id: 'title', label: 'Search', type: 'text', is_advanced: false, param_name: 'title' },
           { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
-          { id: 'level_hypixel_min', label: 'Hypixel Level', type: 'number_range', is_advanced: true, param_name_min: 'level_hypixel_min', param_name_max: 'level_hypixel_max' },
+          { id: 'level_hypixel_min', label: 'Hypixel Level', type: 'number_range', is_advanced: true, param_name_min: 'level_hypixel_min', param_name_max: 'level_hypixel_max' }
       ],
       sorts: [
           { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-          { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+          { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
       ],
   },
   roblox: {
@@ -362,11 +362,11 @@ export const gamePresets = {
       filters: [
           { id: 'title', label: 'Search', type: 'text', is_advanced: false, param_name: 'title' },
           { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
-          { id: 'robux_min', label: 'Robux', type: 'number_range', is_advanced: false, param_name_min: 'robux_min', param_name_max: 'robux_max' },
+          { id: 'robux_min', label: 'Robux', type: 'number_range', is_advanced: false, param_name_min: 'robux_min', param_name_max: 'robux_max' }
       ],
       sorts: [
           { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-          { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+          { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
       ],
   },
   epicgames: {
@@ -391,11 +391,11 @@ export const gamePresets = {
       filters: [
           { id: 'title', label: 'Search', type: 'text', is_advanced: false, param_name: 'title' },
           { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
-          { id: 'gmin', label: 'Games Count', type: 'number_range', is_advanced: true, param_name_min: 'gmin', param_name_max: 'gmax' },
+          { id: 'gmin', label: 'Games Count', type: 'number_range', is_advanced: true, param_name_min: 'gmin', param_name_max: 'gmax' }
       ],
       sorts: [
           { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-          { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+          { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
       ],
   },
   uplay: {
@@ -421,11 +421,11 @@ export const gamePresets = {
       filters: [
           { id: 'title', label: 'Search', type: 'text', is_advanced: false, param_name: 'title' },
           { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
-          { id: 'gmin', label: 'Games Count', type: 'number_range', is_advanced: true, param_name_min: 'gmin', param_name_max: 'gmax' },
+          { id: 'gmin', label: 'Games Count', type: 'number_range', is_advanced: true, param_name_min: 'gmin', param_name_max: 'gmax' }
       ],
       sorts: [
           { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-          { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+          { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
       ],
   },
   battlenet: {
@@ -451,11 +451,11 @@ export const gamePresets = {
       filters: [
           { id: 'title', label: 'Search', type: 'text', is_advanced: false, param_name: 'title' },
           { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
-          { id: 'balance_min', label: 'Balance', type: 'number_range', is_advanced: true, param_name_min: 'balance_min', param_name_max: 'balance_max' },
+          { id: 'balance_min', label: 'Balance', type: 'number_range', is_advanced: true, param_name_min: 'balance_min', param_name_max: 'balance_max' }
       ],
       sorts: [
           { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-          { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+          { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
       ],
   },
   telegram: {
@@ -479,11 +479,11 @@ export const gamePresets = {
     ],
     filters: [
       { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
-      { id: 'premium', label: 'Has Premium', type: 'select', is_advanced: false, param_name: 'premium', options: ['yes', 'no'] },
+      { id: 'premium', label: 'Has Premium', type: 'select', is_advanced: false, param_name: 'premium', options: ['yes', 'no'] }
     ],
     sorts: [
         { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-        { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+        { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
     ],
   },
   supercell: {
@@ -506,11 +506,11 @@ export const gamePresets = {
       { id: 'supercell_king_level', label: 'CR King Level', type: 'game_specific', is_numeric: true },
     ],
     filters: [
-       { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
+       { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' }
     ],
     sorts: [
         { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-        { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+        { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
     ],
   },
   ea: {
@@ -532,11 +532,11 @@ export const gamePresets = {
         { id: 'ea_al_level', label: 'Apex Level', type: 'game_specific', is_numeric: true },
     ],
     filters: [
-        { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' },
+        { id: 'price', label: 'Price', type: 'number_range', is_advanced: false, param_name_min: 'pmin', param_name_max: 'pmax' }
     ],
     sorts: [
         { id: 'pdate_to_down', label: 'Newest First', column: 'last_seen_at', ascending: false },
-        { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
+        { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true }
     ],
   },
   gifts: { name: 'Gifts', slug: 'gifts', category: 'Digital Goods', description: 'Digital gifts like Discord Nitro and Telegram Premium.', api_base_url: 'https://prod-api.lzt.market', list_path: '/gifts', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true } ], filters: [], sorts: [] },
@@ -545,5 +545,5 @@ export const gamePresets = {
   instagram: { name: 'Instagram', slug: 'instagram', category: 'Social', description: 'Instagram accounts with followers and posts.', api_base_url: 'https://prod-api.lzt.market', list_path: '/instagram', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'instagram_follower_count', label: 'Followers', type: 'game_specific', is_numeric: true } ], filters: [], sorts: [] },
   chatgpt: { name: 'ChatGPT', slug: 'chatgpt', category: 'AI / Services', description: 'OpenAI ChatGPT accounts, often with Plus subscriptions.', api_base_url: 'https://prod-api.lzt.market', list_path: '/chatgpt', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'chatgpt_subscription', label: 'Subscription', type: 'game_specific' } ], filters: [], sorts: [] },
   vpn: { name: 'VPN', slug: 'vpn', category: 'Services', description: 'VPN service subscriptions.', api_base_url: 'https://prod-api.lzt.market', list_path: '/vpn', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'vpn_service', label: 'Service', type: 'game_specific' } ], filters: [], sorts: [] },
-  warface: { name: 'Warface', slug: 'warface', category: 'Shooter', description: 'Warface accounts with ranks and Kredits.', api_base_url: 'https://prod-api.lzt.market', list_path: '/warface', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'wf_rank', label: 'Rank', type: 'game_specific', is_numeric: true } ], filters: [], sorts: [] },
+  warface: { name: 'Warface', slug: 'warface', category: 'Shooter', description: 'Warface accounts with ranks and Kredits.', api_base_url: 'https://prod-api.lzt.market', list_path: '/warface', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'wf_rank', label: 'Rank', type: 'game_specific', is_numeric: true } ], filters: [], sorts: [] }
 };

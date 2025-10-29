@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getDashboardCounts, getLatestLogs, addFetchLog, addCheckLog, updateCheckLog, upsertListings, getActiveListingsForCheck, updateListings } from '../services/supabaseService';
+import { getDashboardCounts, getLatestLogs, addFetchLog, addCheckLog, updateCheckLog, upsertListings, getActiveListingsForCheck, updateListings } from '../services/apiService';
 import { fetchListings, checkItemStatus } from '../services/lztService';
 import { calculateDealScore } from '../services/geminiService';
 import { Listing, FetchLog, CheckLog, Game } from '../types';
@@ -151,7 +151,7 @@ const Dashboard: React.FC<DashboardProps> = ({ game, onViewChange }) => {
         addNotification({ type: 'info', message: `Starting item status checks for ${game.name}...`, code: 'C-100' });
         setLastError(null);
         const startTime = Date.now();
-        let log: CheckLog | null = null;
+        let log: any = null; // Type adjusted for simplicity
         try {
             log = await addCheckLog({ game_id: game.id!, items_checked: 0, items_archived: 0, status: 'in_progress', duration_ms: 0, error_message: null });
             let cursorId = 0, finished = false, totalChecked = 0, totalArchived = 0;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getSetting, updateSetting } from '../services/supabaseService';
+import { getSetting, updateSetting } from '../services/apiService';
 import { testApiToken, clearLztTokenCache } from '../services/lztService';
 import { useNotifications } from './NotificationSystem';
 import { Loader2 } from './Icons';
@@ -28,7 +28,7 @@ const SettingsPage: React.FC = () => {
   const handleSaveAndTest = async () => {
     setIsSaving(true);
     try {
-      // 1. Save the setting to the database
+      // 1. Save the setting to the database via our backend
       await updateSetting('lzt_api_token', lztToken);
       addNotification({ type: 'success', message: 'API Token saved to the database.', code: 'SET-200' });
 

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Game } from './types';
-import { initSupabase, getGames, initializeDefaultGames } from './services/supabaseService';
+// UPDATED_IMPORT: Switched from Supabase to the new self-hosted API service.
+import { getGames, initializeDefaultGames } from './services/apiService';
 import MarketplacePage from './components/MarketplacePage';
 import GameManagementPage from './components/GameManagementPage';
 import SetupGuidePage from './components/SetupGuidePage';
 import SettingsPage from './components/SettingsPage';
 import { Loader2, SunIcon, MoonIcon, GameIcon, BookOpenIcon, AlertTriangle, SettingsIcon } from './components/Icons';
 import { NotificationProvider, useNotifications, NotificationBell } from './components/NotificationSystem';
-import SupabaseStatusIndicator from './components/SupabaseStatusIndicator';
 
 type Page = 'marketplace' | 'manage-games' | 'setup-guide' | 'settings';
 type Theme = 'light' | 'dark';
@@ -46,20 +46,11 @@ const AppContent: React.FC = () => {
     setError(null);
     setIsLoading(true);
     try {
-      const { dbReady, schemaLogs } = await initSupabase();
-
-      if (schemaLogs.length > 0) {
-        schemaLogs.forEach(log => {
-            addNotification({ type: 'info', message: log, code: 'DB-SYNC' });
-        });
-      }
-
       let fetchedGames = await getGames();
       
-      if (dbReady && fetchedGames.length === 0) {
-        addNotification({ type: 'info', message: 'No games found, initializing default presets.', code: 'APP-100' });
-        await initializeDefaultGames();
-        fetchedGames = await getGames();
+      // The backend will handle initialization, but we can check if it returned presets as a fallback.
+      if (fetchedGames.length > 0 && fetchedGames[0].created_at.includes('1970-01-01')) {
+         addNotification({ type: 'error', message: 'Could not connect to backend. Running in limited offline mode.', code: 'APP-503' });
       }
 
       setGames(fetchedGames);
@@ -74,9 +65,7 @@ const AppContent: React.FC = () => {
       addNotification({ type: 'success', message: `Platform ready. ${fetchedGames.length} games loaded.`, code: 'APP-200'});
 
     } catch (err: any) {
-      const friendlyError = err.message.includes('SUPABASE') || err.message.includes('LZT')
-          ? `${err.message} Please check the Setup Guide for instructions.`
-          : `An unexpected error occurred: ${err.message}`;
+      const friendlyError = `A critical error occurred: ${err.message}. Please check the Setup Guide for instructions.`;
       setError(friendlyError);
       addNotification({ type: 'error', message: friendlyError, code: 'APP-500' });
       console.error(err);
@@ -190,7 +179,7 @@ const AppContent: React.FC = () => {
         <header className="flex items-center justify-between h-16 px-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 z-10 flex-shrink-0">
             <h1 className="text-xl font-semibold text-gray-800 dark:text-white">{pageTitle}</h1>
             <div className="flex items-center space-x-2">
-              <SupabaseStatusIndicator isLoading={isLoading} />
+              {/* REMOVED: SupabaseStatusIndicator is no longer needed */}
               <NotificationBell />
               <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-900 transition-colors" aria-label="Toggle theme">
                   {theme === 'light' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}

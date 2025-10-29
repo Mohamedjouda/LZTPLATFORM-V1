@@ -45,7 +45,8 @@ export const calculateDealScore = async (listing: Partial<Listing>, game: Game):
       contents: prompt,
     });
     
-    const text = response.text.trim();
+    // FIX: Use optional chaining for robustness in case `response.text` is not available.
+    const text = response.text?.trim();
     const score = parseInt(text, 10);
 
     if (!isNaN(score) && score >= 1 && score <= 100) {
