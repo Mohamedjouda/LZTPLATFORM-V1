@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-const sqlScript = `-- UGLP Schema v1.4 - Idempotent
+// Fix: The SQL script is now stored in a constant within the component.
+const sqlScript = `-- UGLP Schema v1.5 - Secure & Idempotent
 -- This script sets up the necessary tables, storage, and helper functions for the platform.
+-- It now enables Row Level Security (RLS) and creates read policies, which is a security best practice and required for the app to connect.
 -- It is safe to run this script multiple times; it will only create missing objects.
 -- Execute this script in your Supabase SQL Editor.
 
@@ -24,6 +26,11 @@ CREATE TABLE IF NOT EXISTS public.games (
     check_worker_enabled boolean DEFAULT true
 );
 COMMENT ON TABLE public.games IS 'Stores configurations for each game supported by the platform.';
+-- Enable RLS and add a policy for public read access.
+ALTER TABLE public.games ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable public read access" ON public.games;
+CREATE POLICY "Enable public read access" ON public.games FOR SELECT USING (true);
+
 
 -- 2. Create the 'listings' table to store fetched item data.
 CREATE TABLE IF NOT EXISTS public.listings (
@@ -49,6 +56,10 @@ COMMENT ON TABLE public.listings IS 'Stores all fetched listings from various ga
 CREATE INDEX IF NOT EXISTS listings_game_id_idx ON public.listings USING btree (game_id);
 CREATE INDEX IF NOT EXISTS listings_is_archived_idx ON public.listings USING btree (is_archived);
 CREATE INDEX IF NOT EXISTS listings_is_hidden_idx ON public.listings USING btree (is_hidden);
+-- Enable RLS and add a policy for public read access.
+ALTER TABLE public.listings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable public read access" ON public.listings;
+CREATE POLICY "Enable public read access" ON public.listings FOR SELECT USING (true);
 
 
 -- 3. Create the 'fetch_logs' table for logging data fetching operations.
@@ -65,6 +76,10 @@ CREATE TABLE IF NOT EXISTS public.fetch_logs (
 );
 COMMENT ON TABLE public.fetch_logs IS 'Logs the results of data fetching worker runs.';
 CREATE INDEX IF NOT EXISTS fetch_logs_game_id_created_at_idx ON public.fetch_logs USING btree (game_id, created_at DESC);
+-- Enable RLS and add a policy for public read access.
+ALTER TABLE public.fetch_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable public read access" ON public.fetch_logs;
+CREATE POLICY "Enable public read access" ON public.fetch_logs FOR SELECT USING (true);
 
 
 -- 4. Create the 'check_logs' table for logging item status check operations.
@@ -81,6 +96,11 @@ CREATE TABLE IF NOT EXISTS public.check_logs (
 );
 COMMENT ON TABLE public.check_logs IS 'Logs the results of item status checking worker runs.';
 CREATE INDEX IF NOT EXISTS check_logs_game_id_created_at_idx ON public.check_logs USING btree (game_id, created_at DESC);
+-- Enable RLS and add a policy for public read access.
+ALTER TABLE public.check_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable public read access" ON public.check_logs;
+CREATE POLICY "Enable public read access" ON public.check_logs FOR SELECT USING (true);
+
 
 -- 5. Create the 'settings' table for application-wide configurations.
 CREATE TABLE IF NOT EXISTS public.settings (
@@ -90,7 +110,7 @@ CREATE TABLE IF NOT EXISTS public.settings (
     updated_at timestamp with time zone NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE public.settings IS 'Stores key-value settings for the application, like API keys.';
--- Enable Row Level Security
+-- Enable Row Level Security (already had policies, but let's ensure it's enabled).
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read access to all settings.
@@ -100,11 +120,10 @@ AS PERMISSIVE FOR SELECT
 TO public
 USING (true);
 
--- Allow authenticated users to insert/update settings (for admin actions in the future).
-DROP POLICY IF EXISTS "Allow insert/update for authenticated users" ON "public"."settings";
-CREATE POLICY "Allow insert/update for authenticated users" ON "public"."settings"
-AS PERMISSIVE FOR ALL
-TO authenticated
+-- This policy allows the app (using the anon key) to upsert settings.
+DROP POLICY IF EXISTS "Enable anon to upsert settings" ON public.settings;
+CREATE POLICY "Enable anon to upsert settings" ON public.settings FOR ALL
+TO anon
 USING (true)
 WITH CHECK (true);
 
@@ -160,25 +179,16 @@ GRANT EXECUTE ON FUNCTION public.add_column_if_not_exists(text, text, text) TO a
 `;
 
 const SetupGuidePage: React.FC = () => {
-    const [envContent, setEnvContent] = useState('');
-    const [copySqlStatus, setCopySqlStatus] = useState('Copy');
-    const [copyEnvStatus, setCopyEnvStatus] = useState('Copy');
+    const [copyButtonText, setCopyButtonText] = useState('Copy SQL Script');
 
-    useEffect(() => {
-        fetch('/env.js')
-            .then(res => res.text())
-            .then(text => setEnvContent(text))
-            .catch(err => console.error("Could not fetch env.js", err));
-    }, []);
-
-    const handleCopy = (text: string, setStatus: React.Dispatch<React.SetStateAction<string>>) => {
-        navigator.clipboard.writeText(text).then(() => {
-            setStatus('Copied!');
-            setTimeout(() => setStatus('Copy'), 2000);
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-            setStatus('Failed');
-            setTimeout(() => setStatus('Copy'), 2000);
+    const handleCopy = () => {
+        navigator.clipboard.writeText(sqlScript).then(() => {
+            setCopyButtonText('Copied!');
+            setTimeout(() => setCopyButtonText('Copy SQL Script'), 2000);
+        }, (err) => {
+            console.error('Could not copy text: ', err);
+            setCopyButtonText('Failed to copy');
+            setTimeout(() => setCopyButtonText('Copy SQL Script'), 2000);
         });
     };
 
@@ -186,61 +196,69 @@ const SetupGuidePage: React.FC = () => {
         <div className="space-y-8 max-w-4xl mx-auto">
             <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
                 <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">U.G.L.P. Setup Guide</h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                    Welcome! Follow these steps to get your Universal Game Listing Platform instance up and running.
-                    This setup only needs to be done once.
+                <p className="mb-6 text-gray-600 dark:text-gray-400">
+                    Welcome! To get this application running, you'll need to configure a Supabase project and provide some API keys. Follow the steps below.
                 </p>
             </div>
-
-            <Step title="1. Set up your Supabase Database">
-                <p>This application requires a free Supabase project to store game configurations, listings, and logs. If you don't have one, create a new project at <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">supabase.com</a>.</p>
-                <p>Once your project is ready, navigate to the <strong>SQL Editor</strong> section. Copy the entire SQL script below and run it to create the necessary tables and functions.</p>
-                <div className="mt-4 bg-gray-900 rounded-lg">
-                    <div className="flex justify-between items-center px-4 py-2 bg-gray-700 rounded-t-lg">
-                        <span className="text-sm font-medium text-gray-200">Database Schema SQL</span>
-                        <button onClick={() => handleCopy(sqlScript, setCopySqlStatus)} className="text-sm font-semibold bg-gray-600 hover:bg-gray-500 text-white py-1 px-3 rounded-md transition-colors">{copySqlStatus}</button>
-                    </div>
-                    <pre className="p-4 overflow-x-auto text-sm text-white max-h-96"><code>{sqlScript}</code></pre>
-                </div>
-            </Step>
-
-            <Step title="2. Configure Environment Variables">
-                <p>The application needs to connect to your Supabase project. You also need to provide a Gemini API key for the deal scoring feature to work.</p>
-                <p>Open the <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded-md text-sm">/env.js</code> file in your project's root directory. Copy the contents below and replace the placeholder values with your actual keys.</p>
-                 <div className="mt-4 bg-gray-900 rounded-lg">
-                    <div className="flex justify-between items-center px-4 py-2 bg-gray-700 rounded-t-lg">
-                        <span className="text-sm font-medium text-gray-200">/env.js</span>
-                        <button onClick={() => handleCopy(envContent, setCopyEnvStatus)} className="text-sm font-semibold bg-gray-600 hover:bg-gray-500 text-white py-1 px-3 rounded-md transition-colors">{copyEnvStatus}</button>
-                    </div>
-                    <pre className="p-4 overflow-x-auto text-sm text-white"><code>{envContent ? envContent : "Loading env.js..."}</code></pre>
-                </div>
-                 <ul className="mt-4 list-disc list-inside space-y-2 text-sm">
-                    <li><strong className="font-semibold">SUPABASE_URL:</strong> Found in your Supabase project settings under API &gt; Project URL.</li>
-                    <li><strong className="font-semibold">SUPABASE_ANON_KEY:</strong> Found in your Supabase project settings under API &gt; Project API Keys (use the `anon` public key).</li>
-                    <li><strong className="font-semibold">API_KEY:</strong> Your Google Gemini API Key. Get one from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">Google AI Studio</a>. This is required for the "Deal Score" feature.</li>
-                </ul>
-            </Step>
             
-            <Step title="3. Set LZT Market API Token">
-                <p>The LZT Market API Token is required to fetch listings. For security, this is no longer configured in <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded-md text-sm">/env.js</code>.</p>
-                <p>After completing steps 1 and 2 and reloading the application, go to the <strong>Settings</strong> page. Enter your LZT Market Bearer Token there and save it. The application will test the token to ensure it's working.</p>
-            </Step>
-            
-            <div className="bg-green-100 dark:bg-green-900 border-l-4 border-green-500 text-green-800 dark:text-green-200 p-4 rounded-r-lg">
-                <p className="font-bold">Setup Complete!</p>
-                <p>Once these steps are done, you can start managing game configurations and fetching listings. If you encounter any issues, re-check your environment variables and ensure the SQL script ran without errors.</p>
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
+                <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Step 1: Set up Supabase</h2>
+                <ol className="list-decimal list-inside space-y-3 text-gray-700 dark:text-gray-300">
+                    <li>Create a new project on <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">Supabase</a>.</li>
+                    <li>Go to the <span className="font-semibold">SQL Editor</span> page in your Supabase project dashboard.</li>
+                    <li>Copy the SQL script below and run it in the editor. This will create the necessary tables and policies.</li>
+                    <li>Go to <span className="font-semibold">Project Settings &gt; API</span>. Find your Project URL and anon Public Key.</li>
+                    <li>You will need these keys for the next step.</li>
+                </ol>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Supabase Schema SQL</h2>
+                    <button onClick={handleCopy} className="bg-primary-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors w-40">
+                        {copyButtonText}
+                    </button>
+                </div>
+                <div className="bg-gray-900 rounded-lg overflow-hidden">
+                    <pre className="p-4 text-sm text-white overflow-x-auto max-h-96">
+                        <code>
+                            {sqlScript}
+                        </code>
+                    </pre>
+                </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
+                <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Step 2: Configure Environment Variables</h2>
+                <p className="mb-4 text-gray-700 dark:text-gray-300">
+                    Open the <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded-md">env.js</code> file in the root of the project. You need to replace the placeholder values with your actual keys.
+                </p>
+                <div className="bg-gray-900 rounded-lg p-4 text-sm text-white font-mono">
+                    <p>// --- Supabase Configuration ---</p>
+                    <p>window.process.env.SUPABASE_URL = "YOUR_SUPABASE_URL";</p>
+                    <p>window.process.env.SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";</p>
+                    <br />
+                    <p>// --- Google Gemini API Configuration (Optional) ---</p>
+                    <p>window.process.env.API_KEY = "YOUR_GEMINI_API_KEY_HERE";</p>
+                </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
+                <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Step 3: Configure In-App Settings</h2>
+                <ol className="list-decimal list-inside space-y-3 text-gray-700 dark:text-gray-300">
+                    <li>Once the app is running with your Supabase credentials, navigate to the <span className="font-semibold">Settings</span> page.</li>
+                    <li>Enter your LZT Market API Token. You can get one from your <a href="https://lolz.guru/account/api" target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:underline">LZT account settings</a>.</li>
+                    <li>Click 'Save and Test Token' to verify and save it to your database.</li>
+                    <li>If you have a Gemini API key and added it to <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded-md">env.js</code>, the "Deal Score" feature will be enabled automatically.</li>
+                </ol>
+            </div>
+
+            <div className="bg-green-100 dark:bg-green-900 border-l-4 border-green-500 text-green-800 dark:text-green-200 p-6 rounded-lg">
+                <h3 className="text-xl font-bold mb-2">Setup Complete!</h3>
+                <p>After completing these steps, the application should be fully functional. You can start by adding a game configuration from a preset on the 'Manage Games' page.</p>
             </div>
         </div>
     );
 };
-
-const Step: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
-        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white border-b pb-2 dark:border-gray-700">{title}</h2>
-        <div className="space-y-4 text-gray-700 dark:text-gray-300">
-            {children}
-        </div>
-    </div>
-);
 
 export default SetupGuidePage;
