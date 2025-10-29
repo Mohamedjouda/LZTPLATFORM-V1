@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { CheckCircle2, XCircle } from './Icons';
 
-const sqlScript = `-- UGLP Schema v1.8 - Final for Hybrid Setup
--- This script handles all DATABASE setup. Storage policies MUST be set in the Supabase Dashboard UI.
--- It is safe to run multiple times.
+const sqlScript = `-- UGLP Schema v1.9 - Final with Full Permissions
+-- This script is idempotent and can be run multiple times.
+-- It configures all necessary tables, policies (read/write), and helper functions.
 
 BEGIN;
 
@@ -56,31 +56,45 @@ CREATE INDEX IF NOT EXISTS listings_is_hidden_idx ON public.listings USING btree
 CREATE INDEX IF NOT EXISTS fetch_logs_game_id_created_at_idx ON public.fetch_logs USING btree (game_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS check_logs_game_id_created_at_idx ON public.check_logs USING btree (game_id, created_at DESC);
 
--- 4. Enable Row Level Security (RLS)
+-- 4. Enable Row Level Security (RLS) on all tables
 ALTER TABLE public.games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.listings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fetch_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.check_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 
--- 5. Create Policies for Public Access (Idempotent)
-DROP POLICY IF EXISTS "Enable public read access" ON public.games;
-CREATE POLICY "Enable public read access" ON public.games FOR SELECT USING (true);
+-- 5. Create FULL ACCESS Policies for the public 'anon' role (Idempotent)
+-- This allows the application to read and write data as needed.
 
-DROP POLICY IF EXISTS "Enable public read access" ON public.listings;
-CREATE POLICY "Enable public read access" ON public.listings FOR SELECT USING (true);
+-- Games Table Policies
+DROP POLICY IF EXISTS "Enable public read access for games" ON public.games;
+CREATE POLICY "Enable public read access for games" ON public.games FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable public write access for games" ON public.games;
+CREATE POLICY "Enable public write access for games" ON public.games FOR ALL USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Enable public read access" ON public.fetch_logs;
-CREATE POLICY "Enable public read access" ON public.fetch_logs FOR SELECT USING (true);
+-- Listings Table Policies
+DROP POLICY IF EXISTS "Enable public read access for listings" ON public.listings;
+CREATE POLICY "Enable public read access for listings" ON public.listings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable public write access for listings" ON public.listings;
+CREATE POLICY "Enable public write access for listings" ON public.listings FOR ALL USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Enable public read access" ON public.check_logs;
-CREATE POLICY "Enable public read access" ON public.check_logs FOR SELECT USING (true);
+-- Fetch Logs Table Policies
+DROP POLICY IF EXISTS "Enable public read access for fetch_logs" ON public.fetch_logs;
+CREATE POLICY "Enable public read access for fetch_logs" ON public.fetch_logs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable public write access for fetch_logs" ON public.fetch_logs;
+CREATE POLICY "Enable public write access for fetch_logs" ON public.fetch_logs FOR ALL USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Enable read access for all users" ON public.settings;
-CREATE POLICY "Enable read access for all users" ON public.settings AS PERMISSIVE FOR SELECT TO public USING (true);
+-- Check Logs Table Policies
+DROP POLICY IF EXISTS "Enable public read access for check_logs" ON public.check_logs;
+CREATE POLICY "Enable public read access for check_logs" ON public.check_logs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable public write access for check_logs" ON public.check_logs;
+CREATE POLICY "Enable public write access for check_logs" ON public.check_logs FOR ALL USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Enable anon to upsert settings" ON public.settings;
-CREATE POLICY "Enable anon to upsert settings" ON public.settings FOR ALL TO anon USING (true) WITH CHECK (true);
+-- Settings Table Policies
+DROP POLICY IF EXISTS "Enable public read access for settings" ON public.settings;
+CREATE POLICY "Enable public read access for settings" ON public.settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Enable public write access for settings" ON public.settings;
+CREATE POLICY "Enable public write access for settings" ON public.settings FOR ALL USING (true) WITH CHECK (true);
 
 -- 6. Configure Real-Time Publication (Resilient)
 DO $$
@@ -202,7 +216,7 @@ window.process.env.API_KEY = "${geminiApiKey || 'YOUR_GEMINI_API_KEY_HERE'}";
                     <li>In your Supabase project dashboard, go to the <strong>SQL Editor</strong>.</li>
                     <li>Click <strong>New query</strong>.</li>
                     <li>Copy the entire SQL script below and paste it into the editor.</li>
-                    <li>Click <strong>Run</strong>.</li>
+                    <li>Click <strong>Run</strong>. This will fix all connection issues.</li>
                 </ol>
                 <CodeBlock code={sqlScript} />
             </Step>
@@ -212,10 +226,10 @@ window.process.env.API_KEY = "${geminiApiKey || 'YOUR_GEMINI_API_KEY_HERE'}";
                  <ol>
                     <li>In your Supabase project dashboard, go to <strong>Storage</strong> and find the <code>exports</code> bucket.</li>
                     <li>Click the three dots (...) next to the bucket and select <strong>Policies</strong>.</li>
-                    <li>Click <strong>New Policy</strong> and create a policy for <strong>public read access</strong>. Use a template if available, or create a simple SELECT policy for `anon` role.</li>
-                    <li>Create another policy that allows <strong>authenticated users to upload</strong> files (`INSERT`). The application's `anon` key is treated as an authenticated role for this purpose.</li>
+                    <li>Click <strong>New Policy</strong> and create a policy for <strong>public read access (SELECT)</strong>. Use the "Allow public read access" template.</li>
+                    <li>Create another policy that allows **public uploads (`INSERT`, `UPDATE`)**. Use the "Allow anonymous uploads" template.</li>
                 </ol>
-                <p className="text-sm p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg"><strong>Important:</strong> Without these policies, the "Export to CSV" feature will fail. The specific policies depend on your security needs, but at minimum, you need public read and authenticated write access.</p>
+                <p className="text-sm p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg"><strong>Important:</strong> Without these policies, the "Export to CSV" feature will fail.</p>
             </Step>
 
             <Step number={5} title="Configure API Tokens In-App">
