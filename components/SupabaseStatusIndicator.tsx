@@ -32,17 +32,22 @@ const STATUS_CONFIG = {
   },
 };
 
-const SupabaseStatusIndicator: React.FC = () => {
+interface SupabaseStatusIndicatorProps {
+  isLoading: boolean;
+}
+
+const SupabaseStatusIndicator: React.FC<SupabaseStatusIndicatorProps> = ({ isLoading }) => {
   const [status, setStatus] = useState<Status>('CONNECTING');
-  const [isReady, setIsReady] = useState(true);
 
   useEffect(() => {
-    // This effect runs only once on mount to set up the subscription
-    const supabase = getSupabaseClient();
-    const initialDbReady = isDbReady();
-    setIsReady(initialDbReady);
+    if (isLoading) {
+      setStatus('CONNECTING');
+      return; // Wait for the app's initial load to finish
+    }
 
-    if (!supabase || !initialDbReady) {
+    // Initial app load has finished, now we can check the real DB status.
+    const supabase = getSupabaseClient();
+    if (!supabase || !isDbReady()) {
       setStatus('DISCONNECTED');
       return;
     }
@@ -50,11 +55,11 @@ const SupabaseStatusIndicator: React.FC = () => {
     let channel: RealtimeChannel;
     const channelName = `db-status-check-${Math.random()}`;
     
+    // Subscribe to a reliable table to act as a heartbeat.
     channel = supabase
         .channel(channelName)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, () => {
-            // This is just a heartbeat, no action needed on payload.
-            // If we receive this, it means the connection is alive.
+            // If we receive a heartbeat, ensure status is CONNECTED.
             setStatus(currentStatus => currentStatus !== 'CONNECTED' ? 'CONNECTED' : currentStatus);
         })
         .subscribe((subStatus, err) => {
@@ -67,26 +72,28 @@ const SupabaseStatusIndicator: React.FC = () => {
                     setStatus('RECONNECTING');
                     break;
                 case 'CLOSED':
-                    // This can be intentional, but if not, treat as disconnected.
-                    // If the component is still mounted, it's likely an issue.
+                    // If the component is still mounted, a close event is likely an error.
                     setStatus('DISCONNECTED');
                     break;
             }
              if (err) {
-                console.error('Supabase Realtime Error:', err);
+                console.error('Supabase Realtime Subscription Error:', err);
                 setStatus('DISCONNECTED');
             }
         });
 
+    // Cleanup function to remove the channel when the component unmounts.
     return () => {
         if (channel) {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(channel).catch(err => console.error("Error removing Supabase channel:", err));
         }
     };
-  }, []);
+  }, [isLoading]); // This effect now correctly re-runs when the app's loading state changes.
 
   const config = STATUS_CONFIG[status];
-  const finalTooltip = !isReady ? STATUS_CONFIG['DISCONNECTED'].tooltip : config.tooltip;
+  const dbIsActuallyReady = isDbReady();
+  // Show the disconnected tooltip if the DB isn't ready, even if we're still trying to connect.
+  const finalTooltip = (!dbIsActuallyReady && !isLoading) ? STATUS_CONFIG['DISCONNECTED'].tooltip : config.tooltip;
 
   return (
     <div className="group relative flex items-center space-x-2 px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 border border-transparent">

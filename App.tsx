@@ -190,7 +190,7 @@ const AppContent: React.FC = () => {
         <header className="flex items-center justify-between h-16 px-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 z-10 flex-shrink-0">
             <h1 className="text-xl font-semibold text-gray-800 dark:text-white">{pageTitle}</h1>
             <div className="flex items-center space-x-2">
-              <SupabaseStatusIndicator />
+              <SupabaseStatusIndicator isLoading={isLoading} />
               <NotificationBell />
               <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-900 transition-colors" aria-label="Toggle theme">
                   {theme === 'light' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
