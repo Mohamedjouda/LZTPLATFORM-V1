@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 const schemaSqlContent = `
@@ -94,8 +93,7 @@ const setupShContent = `
 function print_color {
     COLOR=$1
     TEXT=$2
-    // FIX: Escape shell variables in template literal
-    echo -e "\\033[\\${COLOR}m\\${TEXT}\\033[0m"
+    echo -e "\\\\033[\${COLOR}m\${TEXT}\\\\033[0m"
 }
 
 function check_command {
@@ -204,19 +202,16 @@ fi
 
 # --- Step 7: Generate and Apply Nginx Configuration ---
 print_color "36" "--> Step 7: Generating Nginx configuration..."
-// FIX: Escape shell variables in template literal
-NGINX_CONF_PATH="/www/server/panel/vhost/nginx/\\${DOMAIN}.conf"
-PROJECT_ROOT="/www/wwwroot/\\${DOMAIN}"
+NGINX_CONF_PATH="/www/server/panel/vhost/nginx/\${DOMAIN}.conf"
+PROJECT_ROOT="/www/wwwroot/\${DOMAIN}"
 
 # Check for existing SSL certs
-// FIX: Escape shell variables in template literal
-SSL_CERT_PATH="/www/server/panel/vhost/cert/\\${DOMAIN}/fullchain.pem"
+SSL_CERT_PATH="/www/server/panel/vhost/cert/\${DOMAIN}/fullchain.pem"
 if [ -f "$SSL_CERT_PATH" ]; then
     print_color "32" "SSL certificate found. Configuring for HTTPS."
     SSL_CONFIG="
     ssl_certificate $SSL_CERT_PATH;
-    // FIX: Escape shell variables in template literal
-    ssl_certificate_key /www/server/panel/vhost/cert/\\${DOMAIN}/privkey.pem;
+    ssl_certificate_key /www/server/panel/vhost/cert/\${DOMAIN}/privkey.pem;
     ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
     ssl_session_cache shared:SSL:10m;
@@ -233,12 +228,10 @@ cat > "$NGINX_CONF_PATH" <<EOL
 server {
     listen 80;
     listen 443 ssl http2;
-    // FIX: Escape shell variables in template literal
-    server_name \\${DOMAIN};
-    \\${SSL_CONFIG}
+    server_name \${DOMAIN};
+    \${SSL_CONFIG}
 
-    // FIX: Escape shell variables in template literal
-    root \\${PROJECT_ROOT}/dist;
+    root \${PROJECT_ROOT}/dist;
     index index.html;
 
     location /api/ {
@@ -253,9 +246,8 @@ server {
         try_files \\$uri \\$uri/ /index.html;
     }
 
-    // FIX: Escape shell variables in template literal
-    access_log /www/wwwlogs/\\${DOMAIN}.log;
-    error_log /www/wwwlogs/\\${DOMAIN}.error.log;
+    access_log /www/wwwlogs/\${DOMAIN}.log;
+    error_log /www/wwwlogs/\${DOMAIN}.error.log;
 }
 EOL
 
@@ -268,8 +260,7 @@ print_color "32" "==================================================="
 print_color "32" " SETUP COMPLETE! "
 print_color "32" "==================================================="
 print_color "33" "Your application is now running. Please complete the final step:"
-// FIX: Escape shell variables in template literal
-print_color "33" "1. Open your website: https://\\${DOMAIN}"
+print_color "33" "1. Open your website: https://\${DOMAIN}"
 print_color "33" "2. Go to the 'Settings' page."
 print_color "33" "3. Enter your LZT Market API Token and save."
 echo
