@@ -83,20 +83,47 @@ COMMENT ON TABLE public.check_logs IS 'Logs the results of item status checking 
 CREATE INDEX check_logs_game_id_created_at_idx ON public.check_logs USING btree (game_id, created_at DESC);
 `;
 
+const NGINX_CONFIG = `server {
+    listen 80;
+    server_name your_domain.com; # Replace with your domain or IP
+
+    # Point root to the 'dist' folder
+    root /path/to/your/project/dist; 
+    index index.html;
+
+    # This rule is crucial for Single-Page Applications (like React)
+    # It ensures all routes are handled by index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Caching rules to prevent issues after updates
+    location = /index.html {
+        expires -1;
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+    }
+
+    location ~* \\.(?:css|js|woff2|png|jpg|jpeg|gif)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}`;
+
 const SetupGuidePage: React.FC = () => {
     const [sqlCopied, setSqlCopied] = useState(false);
+    const [nginxCopied, setNginxCopied] = useState(false);
     
-    const handleCopySql = () => {
-        navigator.clipboard.writeText(SCHEMA_SQL);
-        setSqlCopied(true);
-        setTimeout(() => setSqlCopied(false), 2000);
+    const handleCopy = (text: string, setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+        navigator.clipboard.writeText(text);
+        setter(true);
+        setTimeout(() => setter(false), 2000);
     };
 
     return (
     <div className="max-w-4xl mx-auto space-y-8 text-gray-700 dark:text-gray-300">
         <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
             <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">Application Setup Guide</h1>
-            <p className="mb-6 text-gray-600 dark:text-gray-400">Follow these steps to configure the application. All settings are managed through environment variables on your hosting platform (e.g., cPanel, Vercel, Netlify, GitHub Secrets).</p>
+            <p className="mb-6 text-gray-600 dark:text-gray-400">Follow these steps to configure, build, and deploy the application. All settings are managed through a configuration file or environment variables on your hosting platform.</p>
 
             {/* Step 1: Supabase */}
             <div className="step-section">
@@ -115,7 +142,7 @@ const SetupGuidePage: React.FC = () => {
                 <div className="relative">
                     <pre className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 text-xs font-mono overflow-auto max-h-64 border dark:border-gray-700"><code>{SCHEMA_SQL}</code></pre>
                     <button 
-                        onClick={handleCopySql}
+                        onClick={() => handleCopy(SCHEMA_SQL, setSqlCopied)}
                         className="absolute top-3 right-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-1 rounded-md text-sm font-semibold"
                     >
                         {sqlCopied ? <div className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-1.5 text-green-500" /> Copied!</div> : 'Copy SQL'}
@@ -135,27 +162,56 @@ const SetupGuidePage: React.FC = () => {
             {/* Step 4: Environment Variables */}
             <div className="step-section">
                 <h2 className="step-title">Step 4: Configure Environment Variables</h2>
-                <p className="mb-4">In your hosting provider's settings (e.g., cPanel "Environment Variables", Vercel "Project Settings"), add the following variables:</p>
+                <p className="mb-4">You must provide your API keys to the application. Choose the method that matches your deployment strategy.</p>
+                <h3 className='font-semibold text-lg mb-2 text-gray-800 dark:text-gray-200'>Method A: Hosting Platform (Recommended)</h3>
+                <p className='mb-2 text-sm'>If you are using a platform like Vercel, Netlify, or a panel with environment variable support (like aaPanel), add the following variables in your project settings:</p>
                 <div className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 font-mono text-xs space-y-2 border dark:border-gray-700">
                     <p><code>SUPABASE_URL</code>="your-supabase-project-url"</p>
                     <p><code>SUPABASE_ANON_KEY</code>="your-supabase-anon-key"</p>
                     <p><code>LZT_API_TOKEN</code>="your-lzt-market-bearer-token"</p>
                     <p><code>API_KEY</code>="your-gemini-api-key" <span className="italic text-gray-500">(optional)</span></p>
                 </div>
-                 <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">After setting these variables, you may need to redeploy your application for the changes to take effect.</p>
+                 <h3 className='font-semibold text-lg mt-4 mb-2 text-gray-800 dark:text-gray-200'>Method B: Manual Configuration (for simple static hosting)</h3>
+                 <p className='mb-2 text-sm'>If you are deploying to a simple web server without a build pipeline, you must edit the `env.js` file directly. Replace the placeholder values with your keys.</p>
+                 <p className="mt-2 text-sm text-yellow-600 dark:text-yellow-400"><strong>Important:</strong> If you use this method, you must edit the file **before** running the build command in the next step.</p>
             </div>
             
+            {/* Step 5: Build & Deploy */}
+            <div className="step-section">
+                <h2 className="step-title">Step 5: Build and Deploy the Application</h2>
+                <p className='mb-4'>This application is built with Vite and React, which means you must compile the source code into static HTML, JavaScript, and CSS files before deploying.</p>
+                <ol className="step-list">
+                    <li>Open a terminal or command line on your local machine, and navigate to the project's root directory.</li>
+                    <li>Install the necessary dependencies by running: <code className='code-block'>npm install</code></li>
+                    <li>Build the application for production by running: <code className='code-block'>npm run build</code></li>
+                    <li>This will create a new folder named <code className="font-semibold">dist</code> in your project directory.</li>
+                    <li>Upload **only the contents** of the <code className="font-semibold">dist</code> folder to your web server's public directory (e.g., `public_html`, `wwwroot`).</li>
+                </ol>
+                <h3 className='font-semibold text-lg mt-6 mb-2 text-gray-800 dark:text-gray-200'>Web Server Configuration (Nginx Example)</h3>
+                <p className='mb-4'>Your web server must be configured to serve the `index.html` file for all routes to enable client-side routing. Here is a basic Nginx configuration:</p>
+                <div className="relative">
+                    <pre className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 text-xs font-mono overflow-auto max-h-64 border dark:border-gray-700"><code>{NGINX_CONFIG}</code></pre>
+                    <button 
+                        onClick={() => handleCopy(NGINX_CONFIG, setNginxCopied)}
+                        className="absolute top-3 right-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-1 rounded-md text-sm font-semibold"
+                    >
+                        {nginxCopied ? <div className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-1.5 text-green-500" /> Copied!</div> : 'Copy Config'}
+                    </button>
+                </div>
+            </div>
+
              <div className="mt-8 pt-6 border-t dark:border-gray-700 text-center">
                 <p className="text-lg font-semibold">Setup Complete!</p>
-                <p className="text-gray-600 dark:text-gray-400">Once all steps are done, refresh the application. It should now be fully functional.</p>
+                <p className="text-gray-600 dark:text-gray-400">Once all steps are done and the files are uploaded, your application should be fully functional.</p>
             </div>
         </div>
         <style>{`
             .step-section { margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #374151; }
             .step-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: #16a34a; }
-            .step-list { list-style-type: decimal; margin-left: 1.5rem; space-y: 0.5rem; }
+            .step-list { list-style-type: decimal; margin-left: 1.5rem; space-y: 0.75rem; }
             .link { color: #22c55e; text-decoration: underline; }
             .link:hover { color: #16a34a; }
+            .code-block { background-color: #1f2937; color: #d1d5db; padding: 0.2rem 0.5rem; border-radius: 4px; font-family: monospace; }
         `}</style>
     </div>
   );
