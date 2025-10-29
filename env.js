@@ -12,8 +12,8 @@ window.process.env.SUPABASE_URL = "https://reppasrxzgnnexowirwl.supabase.co";
 window.process.env.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcHBhc3J4emdubmV4b3dpcndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MDA3NjksImV4cCI6MjA3NzE3Njc2OX0.ay3RjGrTlX_3K3AcAj1Rhnfhwv7Ff5SLAc_AKs8GUtM";
 
 // --- LZT Market API Configuration ---
-// Replace with your LZT Market Bearer Token from https://lolz.guru/account/api
-window.process.env.LZT_API_TOKEN = "YOUR_LZT_MARKET_BEARER_TOKEN_HERE";
+// This is now configured on the in-app Settings page. This value is no longer used.
+window.process.env.LZT_API_TOKEN = "DEPRECATED_SEE_SETTINGS_PAGE";
 
 // --- Google Gemini API Configuration (Optional) ---
 // Replace with your Gemini API Key to enable the "Deal Score" feature. Get one from https://aistudio.google.com/app/apikey
