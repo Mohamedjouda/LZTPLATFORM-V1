@@ -4,10 +4,11 @@ import { initSupabase, getGames, initializeDefaultGames } from './services/supab
 import MarketplacePage from './components/MarketplacePage';
 import GameManagementPage from './components/GameManagementPage';
 import SetupGuidePage from './components/SetupGuidePage';
-import { Loader2, SunIcon, MoonIcon, GameIcon, BookOpenIcon, AlertTriangle } from './components/Icons';
+import SettingsPage from './components/SettingsPage';
+import { Loader2, SunIcon, MoonIcon, GameIcon, BookOpenIcon, AlertTriangle, SettingsIcon } from './components/Icons';
 import { NotificationProvider, useNotifications, NotificationBell } from './components/NotificationSystem';
 
-type Page = 'marketplace' | 'manage-games' | 'setup-guide';
+type Page = 'marketplace' | 'manage-games' | 'setup-guide' | 'settings';
 type Theme = 'light' | 'dark';
 
 const AppContent: React.FC = () => {
@@ -111,9 +112,10 @@ const AppContent: React.FC = () => {
 
   const pageTitle = useMemo(() => {
     switch(page) {
-      case 'marketplace': return selectedGame?.name || "Marketplace";
-      case 'manage-games': return "Manage Games";
+      case 'marketplace': return `Marketplace: ${selectedGame?.name || "Select a Game"}`;
+      case 'manage-games': return "Game Management";
       case 'setup-guide': return "Setup Guide";
+      case 'settings': return "Application Settings";
       default: return "U.G.L.P.";
     }
   }, [page, selectedGame]);
@@ -134,6 +136,8 @@ const AppContent: React.FC = () => {
         return <GameManagementPage onGamesUpdated={handleGamesUpdated} />;
       case 'setup-guide':
         return <SetupGuidePage />;
+      case 'settings':
+        return <SettingsPage />;
       default:
         return <div className="text-center p-8">Welcome! Please select a game to view its marketplace.</div>;
     }
@@ -169,6 +173,7 @@ const AppContent: React.FC = () => {
           ))}
         </nav>
         <div className="px-2 py-4 border-t border-gray-700/50 space-y-2">
+          <NavItem icon={<SettingsIcon className="w-6 h-6 flex-shrink-0" />} label="Settings" active={page === 'settings'} onClick={() => setPage('settings')} />
           <NavItem icon={<BookOpenIcon className="w-6 h-6 flex-shrink-0" />} label="Setup Guide" active={page === 'setup-guide'} onClick={() => setPage('setup-guide')} />
         </div>
       </aside>

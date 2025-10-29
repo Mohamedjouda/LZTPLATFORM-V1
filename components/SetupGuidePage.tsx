@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2 } from './Icons';
 
-const SCHEMA_SQL = `-- UGLP Schema v1.1
+const SCHEMA_SQL = `-- UGLP Schema v1.2
 -- This script sets up the necessary tables and storage for the Unified Game Listings Platform.
 -- Execute this script in your Supabase SQL Editor.
 
@@ -82,7 +82,30 @@ CREATE TABLE public.check_logs (
 COMMENT ON TABLE public.check_logs IS 'Logs the results of item status checking worker runs.';
 CREATE INDEX check_logs_game_id_created_at_idx ON public.check_logs USING btree (game_id, created_at DESC);
 
--- 5. Set up Supabase Storage for CSV exports
+-- 5. Create the 'settings' table for application-wide configurations.
+CREATE TABLE public.settings (
+    key text PRIMARY KEY,
+    value text,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE public.settings IS 'Stores key-value settings for the application, like API keys.';
+-- Enable Row Level Security
+ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
+-- Allow public read access to all settings.
+CREATE POLICY "Enable read access for all users" ON "public"."settings"
+AS PERMISSIVE FOR SELECT
+TO public
+USING (true);
+-- Allow authenticated users to insert/update settings (for admin actions in the future).
+CREATE POLICY "Allow insert/update for authenticated users" ON "public"."settings"
+AS PERMISSIVE FOR ALL
+TO authenticated
+USING (true)
+WITH CHECK (true);
+
+
+-- 6. Set up Supabase Storage for CSV exports
 -- This creates the 'exports' bucket and sets policies to allow the app to upload and users to download files.
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('exports', 'exports', true)
@@ -176,33 +199,28 @@ const SetupGuidePage: React.FC = () => {
 
             {/* Step 3: API Keys */}
             <div className="step-section">
-                <h2 className="step-title">Step 3: Get API Keys</h2>
-                 <ol className="step-list">
-                    <li>**LZT Market API Token:** Get your Bearer token from your <a href="https://lolz.guru/account/api" target="_blank" rel="noopener noreferrer" className="link">Lolzteam API settings</a>.</li>
-                    <li>**Gemini API Key (Optional):** To enable the "Deal Score" feature, get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="link">Google AI Studio</a>.</li>
-                </ol>
-            </div>
+                 <h2 className="step-title">Step 3: Configure API Keys</h2>
+                <p className="mb-4">The application requires several API keys to connect to services. Supabase and Gemini keys are configured via environment, while the LZT Token is configured within the app.</p>
 
-            {/* Step 4: Environment Variables */}
-            <div className="step-section">
-                <h2 className="step-title">Step 4: Configure Environment Variables</h2>
-                <p className="mb-4">You must provide your API keys to the application. Choose the method that matches your deployment strategy.</p>
-                <h3 className='font-semibold text-lg mb-2 text-gray-800 dark:text-gray-200'>Method A: Hosting Platform (Recommended)</h3>
-                <p className='mb-2 text-sm'>If you are using a platform like Vercel, Netlify, or a panel with environment variable support (like aaPanel), add the following variables in your project settings:</p>
+                <h3 className='font-semibold text-lg mb-2 text-gray-800 dark:text-gray-200'>A. Supabase & Gemini Keys (Environment)</h3>
+                <p className='mb-2 text-sm'>
+                    These keys are required for the application to start. You must provide them via your hosting platform's environment variable settings (e.g., in Vercel, Netlify, aaPanel) or by editing the <code className='code-block'>env.js</code> file directly before building.
+                </p>
                 <div className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 font-mono text-xs space-y-2 border dark:border-gray-700">
                     <p><code>SUPABASE_URL</code>="your-supabase-project-url"</p>
                     <p><code>SUPABASE_ANON_KEY</code>="your-supabase-anon-key"</p>
-                    <p><code>LZT_API_TOKEN</code>="your-lzt-market-bearer-token"</p>
-                    <p><code>API_KEY</code>="your-gemini-api-key" <span className="italic text-gray-500">(optional)</span></p>
+                    <p><code>API_KEY</code>="your-gemini-api-key" <span className="italic text-gray-500">(optional, for Deal Score)</span></p>
                 </div>
-                 <h3 className='font-semibold text-lg mt-4 mb-2 text-gray-800 dark:text-gray-200'>Method B: Manual Configuration (for simple static hosting)</h3>
-                 <p className='mb-2 text-sm'>If you are deploying to a simple web server without a build pipeline, you must edit the `env.js` file directly. Replace the placeholder values with your keys.</p>
-                 <p className="mt-2 text-sm text-yellow-600 dark:text-yellow-400"><strong>Important:</strong> If you use this method, you must edit the file **before** running the build command in the next step.</p>
+
+                <h3 className='font-semibold text-lg mt-4 mb-2 text-gray-800 dark:text-gray-200'>B. LZT Market Token (In-App)</h3>
+                 <p className='mb-2 text-sm'>
+                    After deploying the application, navigate to the **Settings** page in the sidebar. Enter your LZT Market Bearer Token in the provided field and click save. This will store it securely in your database.
+                </p>
             </div>
             
-            {/* Step 5: Build & Deploy */}
+            {/* Step 4: Build & Deploy */}
             <div className="step-section">
-                <h2 className="step-title">Step 5: Build and Deploy the Application</h2>
+                <h2 className="step-title">Step 4: Build and Deploy the Application</h2>
                 <p className='mb-4'>This application is built with Vite and React, which means you must compile the source code into static HTML, JavaScript, and CSS files before deploying.</p>
                 <ol className="step-list">
                     <li>Open a terminal or command line on your local machine, and navigate to the project's root directory.</li>

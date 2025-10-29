@@ -537,3 +537,39 @@ export const exportToFile = async (listings: Listing[], fileName: string): Promi
         return '';
     }
 };
+
+// SETTINGS
+export const getSetting = async (key: string): Promise<string | null> => {
+    if (!dbReady || !supabase) {
+        limitedModeWarning('getSetting');
+        return null;
+    }
+    try {
+        const { data, error } = await supabase.from('settings').select('value').eq('key', key).single();
+        if (error && error.code !== 'PGRST116') { // PGRST116 = 'exact one row not found'
+            if (isTableMissingError(error)) {
+                dbReady = false;
+                limitedModeWarning('getSetting (fallback)');
+                return null;
+            }
+            handleSupabaseError(error, `getSetting(${key})`);
+        }
+        return data?.value || null;
+    } catch (error) {
+        handleFetchError(error, `getSetting(${key})`);
+        return null;
+    }
+};
+
+export const updateSetting = async (key: string, value: string): Promise<void> => {
+    if (!dbReady || !supabase) {
+        alert("Database is not configured. Cannot save setting.");
+        throw new Error("Database not configured.");
+    }
+    try {
+        const { error } = await supabase.from('settings').upsert({ key, value, updated_at: new Date().toISOString() });
+        if (error) handleSupabaseError(error, `updateSetting(${key})`);
+    } catch (error) {
+        handleFetchError(error, `updateSetting(${key})`);
+    }
+};
