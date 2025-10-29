@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { CheckCircle2 } from './Icons';
 
-const SCHEMA_SQL = `-- UGLP Schema v1.2
--- This script sets up the necessary tables and storage for the Unified Game Listings Platform.
+const SCHEMA_SQL = `-- UGLP Schema v1.3
+-- This script sets up the necessary tables, storage, and helper functions for the platform.
 -- Execute this script in your Supabase SQL Editor.
 
 -- 1. Create the 'games' table to store configurations for each game.
@@ -106,28 +106,50 @@ WITH CHECK (true);
 
 
 -- 6. Set up Supabase Storage for CSV exports
--- This creates the 'exports' bucket and sets policies to allow the app to upload and users to download files.
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('exports', 'exports', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Policy: Allow anonymous public access to view/download files
 CREATE POLICY "Public Read Access for Exports"
 ON storage.objects FOR SELECT
 TO anon
 USING (bucket_id = 'exports');
 
--- Policy: Allow anonymous users to upload to the exports bucket
 CREATE POLICY "Allow anonymous uploads to exports"
 ON storage.objects FOR INSERT
 TO anon
 WITH CHECK (bucket_id = 'exports');
 
--- Policy: Allow anonymous users to update existing files in the exports bucket (for upsert)
 CREATE POLICY "Allow anonymous updates to exports"
 ON storage.objects FOR UPDATE
 TO anon
 USING (bucket_id = 'exports');
+
+
+-- 7. Add a helper function for automatic schema migration.
+-- This function allows the application to add missing columns to tables if they don't exist.
+-- It is used on startup to ensure the database schema is up-to-date with the application code.
+CREATE OR REPLACE FUNCTION public.add_column_if_not_exists(
+    p_table_name text,
+    p_column_name text,
+    p_column_definition text
+)
+RETURNS text AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = p_table_name AND column_name = p_column_name
+    ) THEN
+        EXECUTE format('ALTER TABLE public.%I ADD COLUMN %I %s', p_table_name, p_column_name, p_column_definition);
+        RETURN 'Column ' || quote_ident(p_column_name) || ' added to table ' || quote_ident(p_table_name);
+    ELSE
+        RETURN 'Column ' || quote_ident(p_column_name) || ' already exists in table ' || quote_ident(p_table_name);
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Grant execution rights to the anon role so the application can call it.
+GRANT EXECUTE ON FUNCTION public.add_column_if_not_exists(text, text, text) TO anon;
 `;
 
 const NGINX_CONFIG = `server {
@@ -185,7 +207,7 @@ const SetupGuidePage: React.FC = () => {
             {/* Step 2: SQL Schema */}
             <div className="step-section">
                 <h2 className="step-title">Step 2: Create Database Tables & Storage</h2>
-                <p className="mb-4">Go to the **SQL Editor** in your Supabase project, click "New query", and paste the entire script below. This will create the necessary tables and configure file storage for exports. Click **"RUN"** to execute.</p>
+                <p className="mb-4">Go to the **SQL Editor** in your Supabase project, click "New query", and paste the entire script below. This will create the necessary tables, configure file storage, and add a helper function for automatic schema updates. Click **"RUN"** to execute.</p>
                 <div className="relative">
                     <pre className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 text-xs font-mono overflow-auto max-h-64 border dark:border-gray-700"><code>{SCHEMA_SQL}</code></pre>
                     <button 

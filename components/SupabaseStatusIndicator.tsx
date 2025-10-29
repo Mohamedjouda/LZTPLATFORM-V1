@@ -94,15 +94,14 @@ const SupabaseStatusIndicator: React.FC = () => {
             ? <Loader2 className={`w-4 h-4 animate-spin ${config.color}`} />
             : <DatabaseIcon className={`w-4 h-4 ${config.color}`} />
         }
-        <span className={`hidden sm:inline text-xs font-medium ${config.color}`}>
+        <span className={`hidden md:inline text-xs font-medium ${config.color}`}>
             {config.text}
         </span>
         <div className={`w-2 h-2 rounded-full ${config.dotColor}`}></div>
         
         {/* Tooltip */}
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs px-3 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-50">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-max max-w-xs px-3 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-50">
             {finalTooltip}
-            <div className="tooltip-arrow" data-popper-arrow></div>
         </div>
     </div>
   );

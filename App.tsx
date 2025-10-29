@@ -46,7 +46,14 @@ const AppContent: React.FC = () => {
     setError(null);
     setIsLoading(true);
     try {
-      const { dbReady } = await initSupabase();
+      const { dbReady, schemaLogs } = await initSupabase();
+
+      if (schemaLogs.length > 0) {
+        schemaLogs.forEach(log => {
+            addNotification({ type: 'info', message: log, code: 'DB-SYNC' });
+        });
+      }
+
       let fetchedGames = await getGames();
       
       if (dbReady && fetchedGames.length === 0) {
