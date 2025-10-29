@@ -43,46 +43,40 @@ export const initSupabase = (url: string, key: string) => {
   return supabase;
 };
 
-const checkAllTablesExist = async (client: SupabaseClient): Promise<boolean> => {
-    const tables = ['games', 'listings', 'fetch_logs', 'check_logs'];
-    const checks = tables.map(table => 
-        client.from(table).select('id', { count: 'exact', head: true })
-    );
-    const results = await Promise.all(checks);
-    for (const result of results) {
-        if (result.error && result.error.message.includes(`relation "public.${tables[results.indexOf(result)]}" does not exist`)) {
-            return false;
-        }
-    }
-    return true;
-};
-
 export const testSupabaseConnection = async (url: string, key: string): Promise<{ success: boolean; error: string | null }> => {
     if (!url || !key) return { success: false, error: "Supabase URL and Key must be provided." };
+    
     const testClient = createClient(url, key);
+    
     try {
-        const { error: authError } = await testClient.from('games').select('id', { count: 'exact', head: true });
+        // We only need to check for the 'games' table. If it's missing, the schema needs setup.
+        // The app's own logic will handle seeding presets if the table exists but is empty.
+        const { error } = await testClient.from('games').select('id', { count: 'exact', head: true });
 
-        if (authError?.message.includes('JWT')) {
-            return { success: false, error: `Authentication Error: ${authError.message}. Check your Anon Key.`};
+        if (!error) {
+            // Success! The table exists and we could query it.
+            return { success: true, error: null };
+        }
+
+        // Now, analyze the error.
+        const errorMessage = error.message.toLowerCase();
+
+        if (errorMessage.includes('jwt')) {
+            return { success: false, error: `Authentication Error: ${error.message}. Check your Anon Key.`};
         }
         
-        if (authError && !authError.message.includes('relation "public.games" does not exist')) {
-             return { success: false, error: `Supabase Error: ${authError.message}` };
-        }
-
-        if (authError && authError.message.includes('relation "public.games" does not exist')) {
+        // This is a more robust check for a missing table, covering 404s and explicit "does not exist" messages.
+        if (errorMessage.includes('relation') && errorMessage.includes('does not exist') || error.code === 'PGRST200') {
             return { success: false, error: 'SCHEMA_NOT_FOUND' };
         }
 
-        const tablesExist = await checkAllTablesExist(testClient);
-        if (!tablesExist) {
-            return { success: false, error: 'SCHEMA_NOT_FOUND' };
-        }
+        // For any other database-related error (e.g., permissions, RLS).
+        return { success: false, error: `Supabase Error: ${error.message}` };
 
-        return { success: true, error: null };
     } catch (error: any) {
-        if (error.message?.toLowerCase().includes('failed to fetch')) {
+        // This block catches network-level errors, like failed to fetch / CORS.
+        const errorMessage = String(error?.message || 'Unknown error').toLowerCase();
+        if (errorMessage.includes('failed to fetch')) {
             return { success: false, error: "Network Error: Failed to connect to Supabase. Check your Supabase URL and CORS settings." };
         }
         return { success: false, error: `Unexpected error: ${error.message}` };
