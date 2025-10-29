@@ -181,7 +181,7 @@ const SetupGuidePage: React.FC = () => {
                 <p>Use the "Node project" feature in aapanel to run the backend server.</p>
                 <ol>
                     <li>In aapanel, go to the <strong>Website</strong> section.</li>
-                    <li>Click <strong>Node project</strong> > <strong>Add Node project</strong>.</li>
+                    <li>Click <strong>Node project</strong> {' > '} <strong>Add Node project</strong>.</li>
                     <li>Set the <strong>Project path</strong> to your application's root directory (e.g., `/www/wwwroot/platform.quicktask.online`).</li>
                     <li>Set <strong>Start file name</strong> to `server.js`.</li>
                     <li>Set <strong>Project port</strong> to `3001`.</li>
@@ -193,7 +193,7 @@ const SetupGuidePage: React.FC = () => {
                 <p>The final step is to tell your web server (Nginx) to forward API requests to your new backend server.</p>
                  <ol>
                     <li>Go to the <strong>Website</strong> section and click the configuration file for your site (`platform.quicktask.online`).</li>
-                    <li>Scroll down and find the `location / { ... }` block.</li>
+                    <li>Scroll down and find the <code>location / {'{ ... }'}</code> block.</li>
                     <li><strong>Paste the following code block *above* that `location /` block.</strong></li>
                 </ol>
                 <CodeBlock code={nginxConfig} lang="nginx" />
