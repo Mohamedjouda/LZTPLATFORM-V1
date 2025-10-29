@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { CheckCircle2 } from './Icons';
 
-const SCHEMA_SQL = `-- UGLP Schema v1.0
--- This script sets up the necessary tables for the Unified Game Listings Platform.
+const SCHEMA_SQL = `-- UGLP Schema v1.1
+-- This script sets up the necessary tables and storage for the Unified Game Listings Platform.
 -- Execute this script in your Supabase SQL Editor.
 
 -- 1. Create the 'games' table to store configurations for each game.
@@ -81,6 +81,30 @@ CREATE TABLE public.check_logs (
 );
 COMMENT ON TABLE public.check_logs IS 'Logs the results of item status checking worker runs.';
 CREATE INDEX check_logs_game_id_created_at_idx ON public.check_logs USING btree (game_id, created_at DESC);
+
+-- 5. Set up Supabase Storage for CSV exports
+-- This creates the 'exports' bucket and sets policies to allow the app to upload and users to download files.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('exports', 'exports', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policy: Allow anonymous public access to view/download files
+CREATE POLICY "Public Read Access for Exports"
+ON storage.objects FOR SELECT
+TO anon
+USING (bucket_id = 'exports');
+
+-- Policy: Allow anonymous users to upload to the exports bucket
+CREATE POLICY "Allow anonymous uploads to exports"
+ON storage.objects FOR INSERT
+TO anon
+WITH CHECK (bucket_id = 'exports');
+
+-- Policy: Allow anonymous users to update existing files in the exports bucket (for upsert)
+CREATE POLICY "Allow anonymous updates to exports"
+ON storage.objects FOR UPDATE
+TO anon
+USING (bucket_id = 'exports');
 `;
 
 const NGINX_CONFIG = `server {
@@ -137,8 +161,8 @@ const SetupGuidePage: React.FC = () => {
 
             {/* Step 2: SQL Schema */}
             <div className="step-section">
-                <h2 className="step-title">Step 2: Create Database Tables</h2>
-                <p className="mb-4">Go to the **SQL Editor** in your Supabase project, click "New query", and paste the entire script below. Click **"RUN"** to create the necessary tables.</p>
+                <h2 className="step-title">Step 2: Create Database Tables & Storage</h2>
+                <p className="mb-4">Go to the **SQL Editor** in your Supabase project, click "New query", and paste the entire script below. This will create the necessary tables and configure file storage for exports. Click **"RUN"** to execute.</p>
                 <div className="relative">
                     <pre className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 text-xs font-mono overflow-auto max-h-64 border dark:border-gray-700"><code>{SCHEMA_SQL}</code></pre>
                     <button 
