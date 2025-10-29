@@ -1,47 +1,83 @@
 import React from 'react';
 import { DatabaseIcon, CogIcon, BookOpenIcon, AlertTriangle } from './Icons';
 
-const CodeBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto text-sm my-4">
-        <code className="font-mono text-gray-800 dark:text-gray-200">
+const CodeBlock: React.FC<{ children: React.ReactNode; lang?: string }> = ({ children, lang }) => (
+    <div className="bg-gray-800 p-4 rounded-lg overflow-x-auto text-sm my-4 relative">
+        <pre><code className={`font-mono text-gray-200 language-${lang}`}>
             {children}
-        </code>
-    </pre>
+        </code></pre>
+        <button 
+            onClick={() => navigator.clipboard.writeText(children as string)}
+            className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs font-semibold py-1 px-2 rounded"
+        >
+            Copy
+        </button>
+    </div>
 );
 
 const SetupGuidePage: React.FC = () => {
-    return (
-        <div className="max-w-4xl mx-auto space-y-12 text-gray-700 dark:text-gray-300">
-            <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">U.G.L.P. Setup Guide</h1>
-                <p className="text-lg">
-                    Welcome to the Universal Game Listing Platform. This guide will walk you through the necessary steps to get the application running correctly.
-                </p>
-            </div>
+    
+const nginxConfig = `server {
+    listen 80;
+    listen 443 ssl http2;
+    server_name your_domain.com; # <-- Replace with your domain
 
-            <section>
-                <h2 className="text-2xl font-semibold flex items-center mb-4 text-gray-900 dark:text-white">
-                    <DatabaseIcon className="w-6 h-6 mr-3 text-primary-500" />
-                    Step 1: Database Setup
-                </h2>
-                <p>
-                    The application requires a MySQL database to store game configurations, listings, and logs. You must first create a database and then run the following SQL queries to create the necessary tables.
-                </p>
+    # --- SSL Configuration (Auto-filled by aapanel) ---
+    # Make sure these paths are correct for your server
+    ssl_certificate /www/server/panel/vhost/cert/your_domain.com/fullchain.pem;
+    ssl_certificate_key /www/server/panel/vhost/cert/your_domain.com/privkey.pem;
+    ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    add_header Strict-Transport-Security "max-age=31536000";
 
-                <CodeBlock>
-{`--
--- Main table for storing settings like API keys.
+    # --- Force HTTPS ---
+    if ($scheme != "https") {
+        return 301 https://$host$request_uri;
+    }
+
+    # --- Root Directory for the BUILT FRONTEND ---
+    # This MUST point to the 'dist' folder.
+    root /www/wwwroot/your_domain.com/dist;
+    index index.html;
+
+    # --- Reverse Proxy for the BACKEND API ---
+    # This sends all API calls to your Node.js server.
+    # The port (3001) MUST match the port you configured in the Node Project settings.
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # --- Routing for the React Single-Page Application ---
+    # This ensures that refreshing the browser on any page (e.g., /settings) works correctly.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # --- Standard Logging and Security ---
+    access_log /www/wwwlogs/your_domain.com.log;
+    error_log /www/wwwlogs/your_domain.com.error.log;
+    location ~ ^/(\\.user.ini|\\.htaccess|\\.git|\\.env|\\.svn|\\.project|LICENSE|README\\.md|server\\.js|vite\\.config\\.ts) {
+        return 404;
+    }
+}`;
+
+const sqlSchema = `--
+-- This script is for setting up the database on a standard MySQL/MariaDB server (like on aapanel).
+-- It is idempotent and can be run multiple times safely.
 --
-CREATE TABLE \`settings\` (
+
+CREATE TABLE IF NOT EXISTS \`settings\` (
   \`key\` varchar(255) NOT NULL,
   \`value\` text NOT NULL,
   PRIMARY KEY (\`key\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
---
--- Table to store the game configurations you add.
---
-CREATE TABLE \`games\` (
+CREATE TABLE IF NOT EXISTS \`games\` (
   \`id\` int NOT NULL AUTO_INCREMENT,
   \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   \`name\` varchar(255) NOT NULL,
@@ -62,10 +98,7 @@ CREATE TABLE \`games\` (
   PRIMARY KEY (\`id\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
---
--- Main table for storing all fetched listings.
---
-CREATE TABLE \`listings\` (
+CREATE TABLE IF NOT EXISTS \`listings\` (
   \`item_id\` int NOT NULL,
   \`game_id\` int NOT NULL,
   \`url\` varchar(255) DEFAULT NULL,
@@ -84,10 +117,7 @@ CREATE TABLE \`listings\` (
   PRIMARY KEY (\`game_id\`,\`item_id\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
---
--- Logs for the fetch worker.
---
-CREATE TABLE \`fetch_logs\` (
+CREATE TABLE IF NOT EXISTS \`fetch_logs\` (
   \`id\` varchar(36) NOT NULL,
   \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   \`game_id\` int NOT NULL,
@@ -99,10 +129,7 @@ CREATE TABLE \`fetch_logs\` (
   PRIMARY KEY (\`id\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
---
--- Logs for the check worker.
---
-CREATE TABLE \`check_logs\` (
+CREATE TABLE IF NOT EXISTS \`check_logs\` (
   \`id\` varchar(36) NOT NULL,
   \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   \`game_id\` int NOT NULL,
@@ -112,58 +139,90 @@ CREATE TABLE \`check_logs\` (
   \`error_message\` text,
   \`duration_ms\` int DEFAULT NULL,
   PRIMARY KEY (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;`}
-                </CodeBlock>
-                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+`;
+
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-12 text-gray-700 dark:text-gray-300">
+            <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Self-Hosted Setup Guide (aapanel)</h1>
+                <p className="text-lg">
+                    Follow these steps to deploy the backend, database, and frontend on your aapanel server.
+                </p>
+            </div>
+
+            <section>
+                <h2 className="text-2xl font-semibold flex items-center mb-4 text-gray-900 dark:text-white">
+                    <DatabaseIcon className="w-6 h-6 mr-3 text-primary-500" />
+                    Step 1: Set Up MySQL Database
+                </h2>
+                <ol className="list-decimal list-inside space-y-2">
+                    <li>In aapanel, go to the <strong>Database</strong> section.</li>
+                    <li>Click <strong>Add database</strong>.</li>
+                    <li>Enter a database name (e.g., `uglp_db`), a username, and a strong password. <strong>Save these credentials</strong>.</li>
+                    <li>Once created, click <strong>Import</strong>. Choose "From text" and paste the entire SQL script below.</li>
+                    <li>Click <strong>Submit</strong> to create the tables.</li>
+                </ol>
+                <CodeBlock lang="sql">{sqlSchema}</CodeBlock>
+            </section>
+            
+            <section>
+                <h2 className="text-2xl font-semibold flex items-center mb-4 text-gray-900 dark:text-white">
+                    <CogIcon className="w-6 h-6 mr-3 text-primary-500" />
+                    Step 2: Configure & Deploy Backend
+                </h2>
+                 <ol className="list-decimal list-inside space-y-2">
+                    <li>In aapanel File Manager, navigate to your project root (e.g., `/www/wwwroot/your_domain.com`).</li>
+                    <li>Open the <strong>`services/server.js`</strong> file.</li>
+                    <li>Edit the `dbConfig` section with the database credentials you saved in Step 1.</li>
+                    <li>Go to <strong>Website > Node project > Add Node project</strong>.</li>
+                    <li>Fill out the form:
+                        <ul className="list-disc list-inside ml-6 mt-2 space-y-1 bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
+                           <li><strong>Path:</strong> Your project's root directory.</li>
+                           <li><strong>Run opt:</strong> Select `start-server [node services/server.js]`</li>
+                           <li><strong>Port:</strong> `3001` (This is important!)</li>
+                           <li><strong>Node:</strong> Select a stable version like v18 or v20.</li>
+                        </ul>
+                    </li>
+                    <li>Click <strong>Confirm</strong>. The panel will install dependencies and start the server.</li>
+                </ol>
+            </section>
+            
+             <section>
+                <h2 className="text-2xl font-semibold flex items-center mb-4 text-gray-900 dark:text-white">
+                    <BookOpenIcon className="w-6 h-6 mr-3 text-primary-500" />
+                    Step 3: Build Frontend & Configure Nginx
+                </h2>
+                <ol className="list-decimal list-inside space-y-2">
+                    <li>Connect to your server via SSH, navigate to your project root, and run the build command:
+                        <CodeBlock lang="bash">npm run build</CodeBlock>
+                    </li>
+                    <li>In aapanel, go to <strong>Website</strong> and click your domain name.</li>
+                    <li>Click <strong>Config</strong> on the left.</li>
+                    <li><strong>Delete everything</strong> in the editor and paste the complete Nginx configuration below. Remember to replace `your_domain.com` with your actual domain.</li>
+                </ol>
+                <CodeBlock lang="nginx">{nginxConfig}</CodeBlock>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded-r-lg mt-4">
                     <div className="flex">
                         <div className="flex-shrink-0">
                             <AlertTriangle className="h-5 w-5 text-yellow-400" />
                         </div>
                         <div className="ml-3">
                             <p className="text-sm text-yellow-700 dark:text-yellow-200">
-                                After creating the tables, you must update your database credentials in the <code className="font-mono bg-yellow-100 dark:bg-yellow-800/50 px-1 rounded">server.js</code> file.
+                                This Nginx configuration is the most common source of 404 errors. It correctly serves your frontend from the `/dist` folder and forwards all API requests from `/api/*` to your backend server.
                             </p>
                         </div>
                     </div>
                 </div>
             </section>
-            
-            <section>
+
+             <section>
                 <h2 className="text-2xl font-semibold flex items-center mb-4 text-gray-900 dark:text-white">
-                    <CogIcon className="w-6 h-6 mr-3 text-primary-500" />
-                    Step 2: Configure API Tokens
-                </h2>
-                <div className="space-y-4">
-                    <div>
-                        <h3 className="text-lg font-semibold">LZT Market API Token (Required)</h3>
-                        <p>
-                            This token is required to fetch listing data from the LZT Market. You can obtain your token from your account settings page on their website.
-                            Once you have the token, go to the <strong className="text-primary-600 dark:text-primary-400">Settings</strong> page in this application and paste it into the appropriate field.
-                        </p>
-                        <a href="https://lolz.guru/account/api" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">
-                            Get your LZT Market Token &rarr;
-                        </a>
-                    </div>
-                     <div>
-                        <h3 className="text-lg font-semibold">Google Gemini API Key (Optional)</h3>
-                        <p>
-                            This key is used for the "Deal Score" feature, which analyzes listing data to provide a score from 1 to 100. This feature is optional. If you don't provide a key, deal scores will not be calculated.
-                            To enable it, open the <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">env.js</code> file in the project's root directory and replace <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">"YOUR_GEMINI_API_KEY_HERE"</code> with your actual key.
-                        </p>
-                         <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">
-                            Get your Gemini API Key &rarr;
-                        </a>
-                    </div>
-                </div>
-            </section>
-            
-            <section>
-                 <h2 className="text-2xl font-semibold flex items-center mb-4 text-gray-900 dark:text-white">
-                    <BookOpenIcon className="w-6 h-6 mr-3 text-primary-500" />
-                    Step 3: Add a Game
+                    Step 4: Final Configuration
                 </h2>
                 <p>
-                    Once your backend and API tokens are configured, navigate to the <strong className="text-primary-600 dark:text-primary-400">Manage Games</strong> page. You can add a game from a preset (e.g., Steam, Fortnite) or create a custom configuration from scratch. After adding a game, you can view its marketplace from the sidebar.
+                    With the server running, open your website. Navigate to the <strong>Settings</strong> page and enter your <strong>LZT Market API Token</strong> to begin fetching data. The optional Gemini API key can be set in the `env.js` file to enable deal scores.
                 </p>
             </section>
         </div>
