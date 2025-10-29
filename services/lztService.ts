@@ -1,13 +1,13 @@
 import { FilterState, Game } from '../types';
 
 export const fetchListings = async (
-  token: string,
   page: number = 1,
   game: Game,
   filters: Partial<FilterState>
 ): Promise<{ items: any[], hasNextPage: boolean, totalItems: number }> => {
+  const token = process.env.LZT_API_TOKEN;
   if (!token) {
-    throw new Error('API token is not configured.');
+    throw new Error('LZT Market API token is not configured. Please set LZT_API_TOKEN in your environment variables.');
   }
 
   const params = new URLSearchParams({
@@ -75,9 +75,10 @@ export const fetchListings = async (
 };
 
 
-export const checkItemStatus = async (token: string, apiBaseUrl: string, checkPathTemplate: string, itemId: number): Promise<{isActive: boolean, reason: string}> => {
+export const checkItemStatus = async (apiBaseUrl: string, checkPathTemplate: string, itemId: number): Promise<{isActive: boolean, reason: string}> => {
+    const token = process.env.LZT_API_TOKEN;
     if (!token) {
-        throw new Error('API token is not configured.');
+        throw new Error('LZT Market API token is not configured for checking item status.');
     }
 
     const checkPath = checkPathTemplate.replace('{id}', itemId.toString());

@@ -1,6 +1,24 @@
+// FIX: Removed self-import of GameColumn, GameFilter, and GameSort which were declared in this file, causing a conflict.
+
+export interface Game {
+  id?: number;
+  created_at?: string;
+  name: string;
+  slug: string;
+  category: string;
+  description: string;
+  api_base_url: string; 
+  list_path: string;
+  check_path_template: string;
+  default_filters: Record<string, string>;
+  columns: GameColumn[];
+  filters: GameFilter[];
+  sorts: GameSort[];
+}
+
 export interface GameColumn {
-  id: string; // e.g., 'price', 'level', 'wins'
-  label: string; // e.g., 'Price', 'Level', 'Wins'
+  id: string; 
+  label: string; 
   type: 'core' | 'game_specific';
   is_numeric?: boolean;
   min_width?: string;
@@ -10,36 +28,21 @@ export interface GameFilter {
     id: string;
     label: string;
     type: 'text' | 'number_range' | 'select';
-    options?: string[]; // For select type
+    options?: string[]; 
     is_advanced: boolean;
-    param_name_min?: string; // e.g., pmin
-    param_name_max?: string; // e.g., pmax
-    param_name?: string; // e.g., title
+    param_name_min?: string; 
+    param_name_max?: string; 
+    param_name?: string; 
     placeholder?: string;
 }
 
 export interface GameSort {
-  id: string; // e.g., 'newest'
-  label: string; // e.g., 'Newest First'
-  column: string; // e.g., 'first_seen_at'
+  id: string; 
+  label: string; 
+  column: string; 
   ascending: boolean;
 }
 
-export interface Game {
-  id?: number;
-  created_at?: string;
-  name: string;
-  slug: string;
-  category: string;
-  description: string;
-  api_base_url: string; // Now part of game config if it can vary
-  list_path: string;
-  check_path_template: string;
-  default_filters: Record<string, string>;
-  columns: GameColumn[];
-  filters: GameFilter[];
-  sorts: GameSort[];
-}
 
 export interface Listing {
   item_id: number;
@@ -79,12 +82,6 @@ export interface CheckLog {
   status: 'success' | 'error' | 'in_progress';
   error_message: string | null;
   duration_ms: number;
-}
-
-export interface GlobalSettings {
-  lztApiToken: string;
-  supabaseUrl: string;
-  supabaseAnonKey: string;
 }
 
 export type FilterState = Record<string, string>;

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getDashboardCounts, getLatestLogs, addFetchLog, addCheckLog, updateCheckLog, upsertListings, getActiveListingsForCheck, updateListings } from '../services/supabaseService';
 import { fetchListings, checkItemStatus } from '../services/lztService';
 import { calculateDealScore } from '../services/geminiService';
-import { Listing, FetchLog, CheckLog, GlobalSettings, Game } from '../types';
+import { Listing, FetchLog, CheckLog, Game } from '../types';
 import { RefreshCwIcon, Loader2, CheckCircle2, XCircle } from './Icons';
 import { formatDuration, formatRelativeTime } from '../utils';
 import ListingsPage from './ListingsPage';
@@ -49,10 +49,9 @@ const LogTable: React.FC<{ title: string; logs: (FetchLog | CheckLog)[] }> = ({ 
 
 interface GameDashboardProps {
   game: Game;
-  settings: GlobalSettings;
 }
 
-const GameDashboard: React.FC<GameDashboardProps> = ({ game, settings }) => {
+const GameDashboard: React.FC<GameDashboardProps> = ({ game }) => {
     const [view, setView] = useState<'dashboard' | 'active' | 'hidden' | 'archived'>('dashboard');
     const [counts, setCounts] = useState({ active: 0, hidden: 0, archived: 0 });
     const [fetchLogs, setFetchLogs] = useState<FetchLog[]>([]);
@@ -91,7 +90,7 @@ const GameDashboard: React.FC<GameDashboardProps> = ({ game, settings }) => {
             const logEntry: Partial<FetchLog> = { game_id: game.id!, page: currentPage, status: 'success' };
             const pageStartTime = Date.now();
             try {
-                const { items, hasNextPage } = await fetchListings(settings.lztApiToken, currentPage, game, {});
+                const { items, hasNextPage } = await fetchListings(currentPage, game, {});
                 logEntry.items_fetched = items.length;
                 totalFetched += items.length;
                 
@@ -152,7 +151,7 @@ const GameDashboard: React.FC<GameDashboardProps> = ({ game, settings }) => {
                 if (listings.length === 0) { finished = true; break; }
 
                 const results = await Promise.all(listings.map(async (listing) => {
-                    const { isActive, reason } = await checkItemStatus(settings.lztApiToken, game.api_base_url, game.check_path_template, listing.item_id);
+                    const { isActive, reason } = await checkItemStatus(game.api_base_url, game.check_path_template, listing.item_id);
                     if (!isActive) {
                         await updateListings(game.id!, [listing.item_id], { is_archived: true, archived_reason: reason, archived_at: new Date().toISOString() });
                         return true;
@@ -180,9 +179,9 @@ const GameDashboard: React.FC<GameDashboardProps> = ({ game, settings }) => {
     
     const renderContent = () => {
       switch(view) {
-        case 'active': return <ListingsPage view="active" settings={settings} game={game} />;
-        case 'hidden': return <ListingsPage view="hidden" settings={settings} game={game} />;
-        case 'archived': return <ListingsPage view="archived" settings={settings} game={game} />;
+        case 'active': return <ListingsPage view="active" game={game} />;
+        case 'hidden': return <ListingsPage view="hidden" game={game} />;
+        case 'archived': return <ListingsPage view="archived" game={game} />;
         case 'dashboard':
         default:
           return (

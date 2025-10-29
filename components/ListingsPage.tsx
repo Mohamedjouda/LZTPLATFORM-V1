@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 // FIX: Removed unused import 'getAllListingIds' which is not exported from supabaseService.
 import { getListings, updateListings, exportToFile, getListingsByIds } from '../services/supabaseService';
-import { Listing, FilterState, GameSort, GlobalSettings, Game, GameFilter } from '../types';
+import { Listing, FilterState, GameSort, Game, GameFilter } from '../types';
 import { formatRelativeTime } from '../utils';
 import { SearchIcon, ChevronDown, ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon, DownloadCloudIcon, Loader2, EyeOffIcon } from './Icons';
 
@@ -46,11 +46,10 @@ const FilterField: React.FC<{ filter: GameFilter; values: FilterState; onChange:
 
 interface ListingsPageProps {
   view: 'active' | 'hidden' | 'archived';
-  settings: GlobalSettings;
   game: Game;
 }
 
-const ListingsPage: React.FC<ListingsPageProps> = ({ view, settings, game }) => {
+const ListingsPage: React.FC<ListingsPageProps> = ({ view, game }) => {
     const [listings, setListings] = useState<Listing[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);

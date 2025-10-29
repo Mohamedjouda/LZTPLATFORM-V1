@@ -8,7 +8,6 @@ const handleSupabaseError = (error: PostgrestError, context: string) => {
     console.error(`Supabase error (${context}):`, { message: error.message, details: error.details, hint: error.hint, code: error.code });
     const message = error.message || 'An unknown Supabase error occurred';
 
-    // Supabase might wrap a network error in a PostgrestError. Let's provide a clearer message.
     if (message.toLowerCase().includes('failed to fetch')) {
         throw new Error(`Network Error (${context}): Failed to connect to Supabase. Please verify your Supabase URL and that your browser can access it (CORS).`);
     }
@@ -17,14 +16,12 @@ const handleSupabaseError = (error: PostgrestError, context: string) => {
 };
 
 const handleFetchError = (error: any, context: string): never => {
-    // Prevent double-wrapping our custom errors.
     if (error.message && (error.message.startsWith('Supabase error') || error.message.startsWith('Network Error'))) {
         throw error;
     }
 
     const errorMessage = String(error?.message || 'Unknown error').toLowerCase();
     
-    // Catch common network error messages.
     if (errorMessage.includes('failed to fetch') || errorMessage.includes('network request failed')) {
         throw new Error(`Network Error (${context}): Failed to connect to Supabase. Please verify your Supabase URL and your network connection.`);
     }
@@ -33,64 +30,37 @@ const handleFetchError = (error: any, context: string): never => {
 };
 
 
-export const initSupabase = (url: string, key: string) => {
-  if (!url || !key) {
-    console.warn("Supabase URL or Key is not provided.");
-    supabase = null;
-    return null;
+export const initSupabase = () => {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Supabase URL or Anon Key is not configured. Please set SUPABASE_URL and SUPABASE_ANON_KEY in your environment variables.");
   }
-  supabase = createClient(url, key);
+  
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
   return supabase;
 };
-
-export const testSupabaseConnection = async (url: string, key: string): Promise<{ success: boolean; error: string | null }> => {
-    if (!url || !key) return { success: false, error: "Supabase URL and Key must be provided." };
-    
-    const testClient = createClient(url, key);
-    
-    try {
-        // We only need to check for the 'games' table. If it's missing, the schema needs setup.
-        // The app's own logic will handle seeding presets if the table exists but is empty.
-        const { error } = await testClient.from('games').select('id', { count: 'exact', head: true });
-
-        if (!error) {
-            // Success! The table exists and we could query it.
-            return { success: true, error: null };
-        }
-
-        // Now, analyze the error.
-        const errorMessage = error.message.toLowerCase();
-
-        if (errorMessage.includes('jwt')) {
-            return { success: false, error: `Authentication Error: ${error.message}. Check your Anon Key.`};
-        }
-        
-        // This is a more robust check for a missing table, covering 404s and explicit "does not exist" messages.
-        if (errorMessage.includes('relation') && errorMessage.includes('does not exist') || error.code === 'PGRST200') {
-            return { success: false, error: 'SCHEMA_NOT_FOUND' };
-        }
-
-        // For any other database-related error (e.g., permissions, RLS).
-        return { success: false, error: `Supabase Error: ${error.message}` };
-
-    } catch (error: any) {
-        // This block catches network-level errors, like failed to fetch / CORS.
-        const errorMessage = String(error?.message || 'Unknown error').toLowerCase();
-        if (errorMessage.includes('failed to fetch')) {
-            return { success: false, error: "Network Error: Failed to connect to Supabase. Check your Supabase URL and CORS settings." };
-        }
-        return { success: false, error: `Unexpected error: ${error.message}` };
-    }
-};
-
 
 export const initializeDefaultGames = async () => {
     if (!supabase) throw new Error("Supabase not initialized for seeding.");
     try {
+        // First, check if the table exists at all by doing a head request.
+        const { error: headError } = await supabase.from('games').select('id', { count: 'exact', head: true });
+        
+        if (headError) {
+             // '42P01': undefined_table. This is the error we expect if the schema isn't set up.
+            if (headError.code === '42P01') {
+                throw new Error("The 'games' table does not exist. Please run the SQL script in the Setup Guide.");
+            }
+            // For other unexpected errors during the check.
+            handleSupabaseError(headError, 'initializeDefaultGames(check)');
+        }
+
         const { count, error: countError } = await supabase.from('games').select('id', { count: 'exact', head: true });
 
         if (countError) {
-            handleSupabaseError(countError, 'initializeDefaultGames(check)');
+            handleSupabaseError(countError, 'initializeDefaultGames(count)');
         }
         
         if (count !== null && count > 0) {
