@@ -5,6 +5,7 @@ import { calculateDealScore } from '../services/geminiService';
 import { Listing, FetchLog, CheckLog, Game } from '../types';
 import { RefreshCwIcon, Loader2, CheckCircle2, XCircle, AlertTriangle } from './Icons';
 import { formatDuration, formatRelativeTime } from '../utils';
+import { useNotifications } from './NotificationSystem';
 
 const StatCard: React.FC<{ title: string; value: number | string; onClick?: () => void }> = ({ title, value, onClick }) => (
     <div className={`bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm transition-all duration-300 ${onClick ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1' : ''}`} onClick={onClick}>
@@ -58,6 +59,10 @@ const Dashboard: React.FC<DashboardProps> = ({ game, onViewChange }) => {
     const [checkLogs, setCheckLogs] = useState<CheckLog[]>([]);
     const [workerStatus, setWorkerStatus] = useState({ fetch: 'Idle', check: 'Idle' });
     const [lastError, setLastError] = useState<string | null>(null);
+    const { addNotification } = useNotifications();
+
+    const isFetchEnabled = game.fetch_worker_enabled ?? true;
+    const isCheckEnabled = game.check_worker_enabled ?? true;
 
     const refreshData = useCallback(async () => {
         try {
@@ -81,11 +86,12 @@ const Dashboard: React.FC<DashboardProps> = ({ game, onViewChange }) => {
     }, [refreshData]);
 
     const handleFetchNow = async () => {
+        if (!isFetchEnabled) return;
         setWorkerStatus(prev => ({ ...prev, fetch: 'Fetching...' }));
+        addNotification({ type: 'info', message: `Starting fetch for ${game.name}...`, code: 'F-100' });
         setLastError(null);
         let currentPage = 1, hasNext = true, totalFetched = 0;
-        const startTime = Date.now();
-
+        
         while (hasNext) {
             const logEntry: Partial<FetchLog> = { game_id: game.id!, page: currentPage, status: 'success' };
             const pageStartTime = Date.now();
@@ -119,12 +125,14 @@ const Dashboard: React.FC<DashboardProps> = ({ game, onViewChange }) => {
                     }));
                     await upsertListings(listingsToUpsert);
                 }
+                addNotification({ type: 'success', message: `Page ${currentPage}: Fetched ${items.length} items.`, code: 'F-200' });
                 hasNext = hasNextPage;
                 currentPage++;
             } catch (error: any) {
                 logEntry.status = 'error';
                 logEntry.error_message = error.message;
                 setLastError(`Fetch error on page ${currentPage}: ${error.message}`);
+                addNotification({ type: 'error', message: `Fetch failed on page ${currentPage}: ${error.message}`, code: 'F-500' });
                 hasNext = false;
             } finally {
                 logEntry.duration_ms = Date.now() - pageStartTime;
@@ -134,10 +142,13 @@ const Dashboard: React.FC<DashboardProps> = ({ game, onViewChange }) => {
             if (hasNext) await new Promise(resolve => setTimeout(resolve, 1000));
         }
         setWorkerStatus(prev => ({ ...prev, fetch: `Idle. Last fetch found ${totalFetched} items.` }));
+        addNotification({ type: 'success', message: `Fetch complete for ${game.name}. Found ${totalFetched} total items.`, code: 'F-201' });
     };
 
     const handleRunChecks = async () => {
+        if (!isCheckEnabled) return;
         setWorkerStatus(prev => ({ ...prev, check: 'Checking...' }));
+        addNotification({ type: 'info', message: `Starting item status checks for ${game.name}...`, code: 'C-100' });
         setLastError(null);
         const startTime = Date.now();
         let log: CheckLog | null = null;
@@ -168,9 +179,11 @@ const Dashboard: React.FC<DashboardProps> = ({ game, onViewChange }) => {
             }
             if (log?.id) await updateCheckLog(log.id, { status: 'success', duration_ms: Date.now() - startTime });
             setWorkerStatus(prev => ({ ...prev, check: `Idle. Checked ${totalChecked} items, archived ${totalArchived}.` }));
+            addNotification({ type: 'success', message: `Checks complete. Checked ${totalChecked}, archived ${totalArchived}.`, code: 'C-200' });
         } catch (error: any) {
             if (log?.id) await updateCheckLog(log.id, { status: 'error', error_message: error.message, duration_ms: Date.now() - startTime });
             setLastError(`Check error: ${error.message}`);
+            addNotification({ type: 'error', message: `Check worker failed: ${error.message}`, code: 'C-500' });
             setWorkerStatus(prev => ({...prev, check: 'Error'}));
         } finally {
             await refreshData();
@@ -188,15 +201,19 @@ const Dashboard: React.FC<DashboardProps> = ({ game, onViewChange }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
                     <h3 className="text-lg font-semibold mb-2">Fetch Worker</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 min-h-[40px]">{workerStatus.fetch}</p>
-                    <button onClick={handleFetchNow} disabled={workerStatus.fetch.includes('Fetching...')} className="w-full bg-primary-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-primary-700 disabled:bg-primary-400 flex items-center justify-center">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 min-h-[40px]">
+                        {isFetchEnabled ? workerStatus.fetch : <span className="text-yellow-500 font-semibold">Worker is disabled.</span>}
+                    </p>
+                    <button onClick={handleFetchNow} disabled={!isFetchEnabled || workerStatus.fetch.includes('Fetching...')} className="w-full bg-primary-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-primary-700 disabled:bg-primary-400 disabled:cursor-not-allowed flex items-center justify-center">
                         {workerStatus.fetch.includes('Fetching...') ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <RefreshCwIcon className="w-5 h-5 mr-2" />} Fetch Now
                     </button>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
                     <h3 className="text-lg font-semibold mb-2">Check Worker</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 min-h-[40px]">{workerStatus.check}</p>
-                    <button onClick={handleRunChecks} disabled={workerStatus.check.includes('Checking...')} className="w-full bg-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-green-700 disabled:bg-green-400 flex items-center justify-center">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 min-h-[40px]">
+                        {isCheckEnabled ? workerStatus.check : <span className="text-yellow-500 font-semibold">Worker is disabled.</span>}
+                    </p>
+                    <button onClick={handleRunChecks} disabled={!isCheckEnabled || workerStatus.check.includes('Checking...')} className="w-full bg-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed flex items-center justify-center">
                         {workerStatus.check.includes('Checking...') ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CheckCircle2 className="w-5 h-5 mr-2" />} Run Checks
                     </button>
                 </div>

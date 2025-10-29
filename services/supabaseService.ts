@@ -254,6 +254,133 @@ export const getListingsByIds = async (gameId: number, ids: number[]): Promise<L
     }
 };
 
+export const getAllListingIds = async (game: Game, view: 'active' | 'hidden' | 'archived', filters: FilterState): Promise<number[]> => {
+    if (!dbReady || !supabase) {
+        limitedModeWarning('getAllListingIds');
+        return [];
+    }
+
+    let query = supabase.from('listings').select('item_id').eq('game_id', game.id!);
+
+    if (view === 'active') query = query.eq('is_hidden', false).eq('is_archived', false);
+    if (view === 'hidden') query = query.eq('is_hidden', true).eq('is_archived', false);
+    if (view === 'archived') query = query.eq('is_archived', true);
+
+    Object.entries(filters).forEach(([key, value]) => {
+        if (!value) return;
+        const filterConfig = game.filters.find(f => f.id === key || `${f.id}_min` === key || `${f.id}_max` === key);
+        if (!filterConfig) return;
+
+        const dbColumn = game.columns.find(c => c.id === filterConfig.id);
+        const isCoreField = dbColumn?.type === 'core';
+        const fieldName = isCoreField ? filterConfig.id : `game_specific_data->>${filterConfig.id}`;
+        
+        if (filterConfig.type === 'number_range') {
+            if (key.endsWith('_min')) query = query.gte(fieldName, value);
+            if (key.endsWith('_max')) query = query.lte(fieldName, value);
+        } else {
+            query = query.ilike(fieldName, `%${value}%`);
+        }
+    });
+    
+    const BATCH_SIZE = 1000;
+    let allIds: number[] = [];
+    let offset = 0;
+    let hasMore = true;
+
+    try {
+        while (hasMore) {
+            const { data, error } = await query.range(offset, offset + BATCH_SIZE - 1);
+            if (error) {
+                if (isTableMissingError(error)) {
+                    dbReady = false;
+                    limitedModeWarning('getAllListingIds (fallback)');
+                    return [];
+                }
+                handleSupabaseError(error, 'getAllListingIds');
+            }
+            if (data && data.length > 0) {
+                allIds = allIds.concat(data.map(item => item.item_id));
+                offset += BATCH_SIZE;
+            }
+            if (!data || data.length < BATCH_SIZE) {
+                hasMore = false;
+            }
+        }
+        return allIds;
+    } catch (error) {
+        handleFetchError(error, 'getAllListingIds');
+        return [];
+    }
+}
+
+
+export const getAllListingsForExport = async (game: Game, view: 'active' | 'hidden' | 'archived', filters: FilterState, sortId: string): Promise<Listing[]> => {
+    if (!dbReady || !supabase) {
+        limitedModeWarning('getAllListingsForExport');
+        return [];
+    }
+
+    let query = supabase.from('listings').select('*').eq('game_id', game.id!);
+
+    if (view === 'active') query = query.eq('is_hidden', false).eq('is_archived', false);
+    if (view === 'hidden') query = query.eq('is_hidden', true).eq('is_archived', false);
+    if (view === 'archived') query = query.eq('is_archived', true);
+
+    Object.entries(filters).forEach(([key, value]) => {
+        if (!value) return;
+        const filterConfig = game.filters.find(f => f.id === key || `${f.id}_min` === key || `${f.id}_max` === key);
+        if (!filterConfig) return;
+
+        const dbColumn = game.columns.find(c => c.id === filterConfig.id);
+        const isCoreField = dbColumn?.type === 'core';
+        const fieldName = isCoreField ? filterConfig.id : `game_specific_data->>${filterConfig.id}`;
+        
+        if (filterConfig.type === 'number_range') {
+            if (key.endsWith('_min')) query = query.gte(fieldName, value);
+            if (key.endsWith('_max')) query = query.lte(fieldName, value);
+        } else {
+            query = query.ilike(fieldName, `%${value}%`);
+        }
+    });
+    
+    const sortOption = game.sorts.find(s => s.id === sortId) || game.sorts[0];
+    if (sortOption) {
+        query = query.order(sortOption.column, { ascending: sortOption.ascending, nullsFirst: false });
+    }
+
+    const BATCH_SIZE = 1000;
+    let allListings: Listing[] = [];
+    let offset = 0;
+    let hasMore = true;
+
+    try {
+        while (hasMore) {
+            const { data, error } = await query.range(offset, offset + BATCH_SIZE - 1);
+            if (error) {
+                 if (isTableMissingError(error)) {
+                    dbReady = false;
+                    limitedModeWarning('getAllListingsForExport (fallback)');
+                    return [];
+                }
+                handleSupabaseError(error, 'getAllListingsForExport');
+            }
+
+            if (data && data.length > 0) {
+                allListings = allListings.concat(data);
+                offset += BATCH_SIZE;
+            } 
+            if (!data || data.length < BATCH_SIZE) {
+                hasMore = false;
+            }
+        }
+        return allListings;
+    } catch (error) {
+        handleFetchError(error, 'getAllListingsForExport');
+        return [];
+    }
+}
+
 export const updateListings = async (gameId: number, ids: number[], updates: Partial<Listing>) => {
     if (!dbReady || !supabase) {
         alert("Database is not configured. Cannot update listings.");

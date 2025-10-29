@@ -12,6 +12,8 @@ export interface Game {
   columns: GameColumn[];
   filters: GameFilter[];
   sorts: GameSort[];
+  fetch_worker_enabled?: boolean;
+  check_worker_enabled?: boolean;
 }
 
 export interface GameColumn {
@@ -83,3 +85,12 @@ export interface CheckLog {
 }
 
 export type FilterState = Record<string, string>;
+
+export interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  message: string;
+  code?: string;
+  timestamp: string;
+  read: boolean;
+}

@@ -11,6 +11,8 @@ export const allAccountsPreset: Omit<Game, 'id' | 'created_at'> = {
   list_path: '/',
   check_path_template: '/{id}/check-account',
   default_filters: { currency: 'usd' },
+  fetch_worker_enabled: true,
+  check_worker_enabled: true,
   columns: [
     { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
     { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -40,6 +42,8 @@ export const steamPreset: Omit<Game, 'id' | 'created_at'> = {
   list_path: '/steam',
   check_path_template: '/{id}/check-account',
   default_filters: { currency: 'usd' },
+  fetch_worker_enabled: true,
+  check_worker_enabled: true,
   columns: [
     { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
     { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -77,6 +81,8 @@ export const fortnitePreset: Omit<Game, 'id' | 'created_at'> = {
   list_path: '/fortnite',
   check_path_template: '/{id}/check-account',
   default_filters: { currency: 'usd' },
+  fetch_worker_enabled: true,
+  check_worker_enabled: true,
   columns: [
     { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
     { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -115,6 +121,8 @@ export const mihoyoPreset: Omit<Game, 'id' | 'created_at'> = {
     list_path: '/mihoyo',
     check_path_template: '/{id}/check-account',
     default_filters: { currency: 'usd' },
+    fetch_worker_enabled: true,
+    check_worker_enabled: true,
     columns: [
       { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
       { id: 'url', label: 'URL', type: 'core' },
@@ -151,6 +159,8 @@ export const riotPreset: Omit<Game, 'id' | 'created_at'> = {
   list_path: '/riot',
   check_path_template: '/{id}/check-account',
   default_filters: { currency: 'usd' },
+  fetch_worker_enabled: true,
+  check_worker_enabled: true,
   columns: [
     { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
     { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -183,6 +193,8 @@ const wotPreset = {
   api_base_url: 'https://prod-api.lzt.market',
   check_path_template: '/{id}/check-account',
   default_filters: { currency: 'usd' },
+  fetch_worker_enabled: true,
+  check_worker_enabled: true,
   columns: [
     { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
     { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -236,6 +248,8 @@ export const gamePresets = {
     list_path: '/escape-from-tarkov',
     check_path_template: '/{id}/check-account',
     default_filters: { currency: 'usd' },
+    fetch_worker_enabled: true,
+    check_worker_enabled: true,
     columns: [
         { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
         { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -267,6 +281,8 @@ export const gamePresets = {
     list_path: '/socialclub',
     check_path_template: '/{id}/check-account',
     default_filters: { currency: 'usd' },
+    fetch_worker_enabled: true,
+    check_worker_enabled: true,
     columns: [
       { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
       { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -299,6 +315,8 @@ export const gamePresets = {
       list_path: '/minecraft',
       check_path_template: '/{id}/check-account',
       default_filters: { currency: 'usd' },
+      fetch_worker_enabled: true,
+      check_worker_enabled: true,
       columns: [
           { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
           { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -329,6 +347,8 @@ export const gamePresets = {
       list_path: '/roblox',
       check_path_template: '/{id}/check-account',
       default_filters: { currency: 'usd' },
+      fetch_worker_enabled: true,
+      check_worker_enabled: true,
       columns: [
           { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
           { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -358,6 +378,8 @@ export const gamePresets = {
       list_path: '/epicgames',
       check_path_template: '/{id}/check-account',
       default_filters: { currency: 'usd' },
+      fetch_worker_enabled: true,
+      check_worker_enabled: true,
       columns: [
           { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
           { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -385,6 +407,8 @@ export const gamePresets = {
       list_path: '/uplay',
       check_path_template: '/{id}/check-account',
       default_filters: { currency: 'usd' },
+      fetch_worker_enabled: true,
+      check_worker_enabled: true,
       columns: [
           { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
           { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -413,6 +437,8 @@ export const gamePresets = {
       list_path: '/battlenet',
       check_path_template: '/{id}/check-account',
       default_filters: { currency: 'usd' },
+      fetch_worker_enabled: true,
+      check_worker_enabled: true,
       columns: [
           { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
           { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -441,6 +467,8 @@ export const gamePresets = {
     list_path: '/telegram',
     check_path_template: '/{id}/check-account',
     default_filters: { currency: 'usd' },
+    fetch_worker_enabled: true,
+    check_worker_enabled: true,
     columns: [
       { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
       { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -467,6 +495,8 @@ export const gamePresets = {
     list_path: '/supercell',
     check_path_template: '/{id}/check-account',
     default_filters: { currency: 'usd' },
+    fetch_worker_enabled: true,
+    check_worker_enabled: true,
     columns: [
       { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
       { id: 'price', label: 'Price', type: 'core', is_numeric: true },
@@ -492,6 +522,8 @@ export const gamePresets = {
     list_path: '/ea',
     check_path_template: '/{id}/check-account',
     default_filters: { currency: 'usd' },
+    fetch_worker_enabled: true,
+    check_worker_enabled: true,
     columns: [
         { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },
         { id: 'title', label: 'Title', type: 'core', min_width: '20rem' },
@@ -507,11 +539,11 @@ export const gamePresets = {
         { id: 'price_to_up', label: 'Price: Low to High', column: 'price', ascending: true },
     ],
   },
-  gifts: { name: 'Gifts', slug: 'gifts', category: 'Digital Goods', description: 'Digital gifts like Discord Nitro and Telegram Premium.', api_base_url: 'https://prod-api.lzt.market', list_path: '/gifts', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true } ], filters: [], sorts: [] },
-  discord: { name: 'Discord', slug: 'discord', category: 'Social', description: 'Discord accounts, often with Nitro or special badges.', api_base_url: 'https://prod-api.lzt.market', list_path: '/discord', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'discord_nitro_type', label: 'Nitro Type', type: 'game_specific' } ], filters: [], sorts: [] },
-  tiktok: { name: 'TikTok', slug: 'tiktok', category: 'Social', description: 'TikTok accounts with followers and likes.', api_base_url: 'https://prod-api.lzt.market', list_path: '/tiktok', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'tt_followers', label: 'Followers', type: 'game_specific', is_numeric: true } ], filters: [], sorts: [] },
-  instagram: { name: 'Instagram', slug: 'instagram', category: 'Social', description: 'Instagram accounts with followers and posts.', api_base_url: 'https://prod-api.lzt.market', list_path: '/instagram', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'instagram_follower_count', label: 'Followers', type: 'game_specific', is_numeric: true } ], filters: [], sorts: [] },
-  chatgpt: { name: 'ChatGPT', slug: 'chatgpt', category: 'AI / Services', description: 'OpenAI ChatGPT accounts, often with Plus subscriptions.', api_base_url: 'https://prod-api.lzt.market', list_path: '/chatgpt', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'chatgpt_subscription', label: 'Subscription', type: 'game_specific' } ], filters: [], sorts: [] },
-  vpn: { name: 'VPN', slug: 'vpn', category: 'Services', description: 'VPN service subscriptions.', api_base_url: 'https://prod-api.lzt.market', list_path: '/vpn', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'vpn_service', label: 'Service', type: 'game_specific' } ], filters: [], sorts: [] },
-  warface: { name: 'Warface', slug: 'warface', category: 'Shooter', description: 'Warface accounts with ranks and Kredits.', api_base_url: 'https://prod-api.lzt.market', list_path: '/warface', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'wf_rank', label: 'Rank', type: 'game_specific', is_numeric: true } ], filters: [], sorts: [] },
+  gifts: { name: 'Gifts', slug: 'gifts', category: 'Digital Goods', description: 'Digital gifts like Discord Nitro and Telegram Premium.', api_base_url: 'https://prod-api.lzt.market', list_path: '/gifts', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true } ], filters: [], sorts: [] },
+  discord: { name: 'Discord', slug: 'discord', category: 'Social', description: 'Discord accounts, often with Nitro or special badges.', api_base_url: 'https://prod-api.lzt.market', list_path: '/discord', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'discord_nitro_type', label: 'Nitro Type', type: 'game_specific' } ], filters: [], sorts: [] },
+  tiktok: { name: 'TikTok', slug: 'tiktok', category: 'Social', description: 'TikTok accounts with followers and likes.', api_base_url: 'https://prod-api.lzt.market', list_path: '/tiktok', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'tt_followers', label: 'Followers', type: 'game_specific', is_numeric: true } ], filters: [], sorts: [] },
+  instagram: { name: 'Instagram', slug: 'instagram', category: 'Social', description: 'Instagram accounts with followers and posts.', api_base_url: 'https://prod-api.lzt.market', list_path: '/instagram', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'instagram_follower_count', label: 'Followers', type: 'game_specific', is_numeric: true } ], filters: [], sorts: [] },
+  chatgpt: { name: 'ChatGPT', slug: 'chatgpt', category: 'AI / Services', description: 'OpenAI ChatGPT accounts, often with Plus subscriptions.', api_base_url: 'https://prod-api.lzt.market', list_path: '/chatgpt', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'chatgpt_subscription', label: 'Subscription', type: 'game_specific' } ], filters: [], sorts: [] },
+  vpn: { name: 'VPN', slug: 'vpn', category: 'Services', description: 'VPN service subscriptions.', api_base_url: 'https://prod-api.lzt.market', list_path: '/vpn', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'vpn_service', label: 'Service', type: 'game_specific' } ], filters: [], sorts: [] },
+  warface: { name: 'Warface', slug: 'warface', category: 'Shooter', description: 'Warface accounts with ranks and Kredits.', api_base_url: 'https://prod-api.lzt.market', list_path: '/warface', check_path_template: '/{id}/check-account', default_filters: { currency: 'usd' }, fetch_worker_enabled: true, check_worker_enabled: true, columns: [ { id: 'item_id', label: 'Item ID', type: 'core', is_numeric: true },{ id: 'title', label: 'Title', type: 'core', min_width: '20rem' }, { id: 'price', label: 'Price', type: 'core', is_numeric: true }, { id: 'wf_rank', label: 'Rank', type: 'game_specific', is_numeric: true } ], filters: [], sorts: [] },
 };

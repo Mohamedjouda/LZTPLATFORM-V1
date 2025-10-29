@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getListings, updateListings, exportToFile, getListingsByIds } from '../services/supabaseService';
-import { Listing, FilterState, GameSort, Game, GameFilter } from '../types';
+import { getListings, updateListings, exportToFile, getListingsByIds, getAllListingIds, getAllListingsForExport } from '../services/supabaseService';
+import { Listing, FilterState, Game, GameFilter } from '../types';
 import { formatRelativeTime } from '../utils';
-import { SearchIcon, ChevronDown, ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon, DownloadCloudIcon, Loader2, EyeOffIcon } from './Icons';
+import { SearchIcon, ChevronDown, ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon, DownloadCloudIcon, Loader2, EyeOffIcon, ArchiveIcon, ArchiveRestoreIcon } from './Icons';
+import { useNotifications } from './NotificationSystem';
 
 const getDealScoreColor = (score: number | null) => {
     if (score === null || score === undefined) return 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-300';
@@ -63,6 +64,10 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ view, game }) => {
 
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isSelectingAll, setIsSelectingAll] = useState(false);
+    const [isExporting, setIsExporting] = useState<null | 'selected' | 'all'>(null);
+    const { addNotification } = useNotifications();
+
 
     const fetchAndSetListings = useCallback(async () => {
         setIsLoading(true);
@@ -106,33 +111,87 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ view, game }) => {
         setSelectedIds(prev => prev.size === listings.length ? new Set() : new Set(listings.map(l => l.item_id)));
     };
 
-    const handleBulkAction = async (action: 'hide' | 'unhide' | 'exportSelected') => {
+    const handleSelectAll = async () => {
+        setIsSelectingAll(true);
+        setError(null);
+        try {
+            const ids = await getAllListingIds(game, view, filters);
+            setSelectedIds(new Set(ids));
+        } catch (err: any) {
+            setError(`Failed to select all listings: ${err.message}`);
+        } finally {
+            setIsSelectingAll(false);
+        }
+    };
+    
+    const handleClearSelection = () => {
+        setSelectedIds(new Set());
+    };
+
+    const handleBulkAction = async (action: 'hide' | 'unhide' | 'archive' | 'unarchive') => {
         setIsProcessing(true);
         setError(null);
-        const ids = Array.from(selectedIds) as number[];
+        const ids = Array.from(selectedIds);
         try {
+            let successMessage = '';
             if (action === 'hide') {
                 await updateListings(game.id!, ids, { is_hidden: true });
+                successMessage = `${ids.length} listing(s) hidden successfully.`;
             } else if (action === 'unhide') {
                 await updateListings(game.id!, ids, { is_hidden: false });
-            } else if (action === 'exportSelected') {
-                if (ids.length === 0) { alert("No items selected."); setIsProcessing(false); return; }
-                const listingsToExport = await getListingsByIds(game.id!, ids);
-                if (listingsToExport.length > 0) {
-                    const downloadableUrl = await exportToFile(listingsToExport, `export-${game.slug}-${view}-${new Date().toISOString()}`);
-                    window.open(downloadableUrl, '_blank');
-                } else {
-                    alert("Could not retrieve listings for export.");
-                }
+                successMessage = `${ids.length} listing(s) restored successfully.`;
+            } else if (action === 'archive') {
+                await updateListings(game.id!, ids, { is_archived: true, archived_at: new Date().toISOString(), archived_reason: 'Manually archived' });
+                successMessage = `${ids.length} listing(s) archived successfully.`;
+            } else if (action === 'unarchive') {
+                await updateListings(game.id!, ids, { is_archived: false, archived_at: null, archived_reason: null });
+                successMessage = `${ids.length} listing(s) unarchived successfully.`;
             }
             setSelectedIds(new Set());
             fetchAndSetListings();
+            addNotification({ type: 'success', message: successMessage, code: 'LST-210' });
         } catch(err: any) {
-            setError(`Action failed: ${err.message}`);
+            const message = `Action failed: ${err.message}`;
+            setError(message);
+            addNotification({ type: 'error', message: message, code: 'LST-510' });
         } finally {
             setIsProcessing(false);
         }
     };
+    
+    const handleExport = async (type: 'selected' | 'all') => {
+        setIsExporting(type);
+        setError(null);
+        try {
+            let listingsToExport: Listing[];
+            if (type === 'all') {
+                listingsToExport = await getAllListingsForExport(game, view, filters, sort);
+            } else { // 'selected'
+                const ids = Array.from(selectedIds);
+                if (ids.length === 0) {
+                    addNotification({ type: 'info', message: 'No items selected for export.', code: 'EXP-100' });
+                    setIsExporting(null);
+                    return;
+                }
+                listingsToExport = await getListingsByIds(game.id!, ids);
+            }
+
+            if (listingsToExport.length > 0) {
+                const fileName = `export-${game.slug}-${view}-${new Date().toISOString().split('T')[0]}`;
+                const downloadableUrl = await exportToFile(listingsToExport, fileName);
+                window.open(downloadableUrl, '_blank');
+                addNotification({ type: 'success', message: `${listingsToExport.length} listings exported.`, code: 'EXP-200' });
+            } else {
+                addNotification({ type: 'info', message: 'No listings found to export.', code: 'EXP-101' });
+            }
+        } catch (err: any) {
+            const message = `Export failed: ${err.message}`;
+            setError(message);
+            addNotification({ type: 'error', message, code: 'EXP-500' });
+        } finally {
+            setIsExporting(null);
+        }
+    }
     
     const totalPages = Math.ceil(totalCount / rowsPerPage);
     const basicFilters = useMemo(() => game.filters.filter(f => !f.is_advanced), [game.filters]);
@@ -184,10 +243,24 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ view, game }) => {
 
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-wrap gap-2">
-                    <button onClick={handleSelectAllVisible} className="text-sm bg-white dark:bg-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-sm">{selectedIds.size === listings.length && listings.length > 0 ? 'Clear' : 'Select Visible'}</button>
-                    {view === 'active' && <button onClick={() => handleBulkAction('hide')} className="text-sm bg-yellow-500 text-white px-3 py-1.5 rounded-md hover:bg-yellow-600 disabled:opacity-50" disabled={selectedIds.size === 0 || isProcessing}><EyeOffIcon className="w-4 h-4 inline-block mr-1" />Hide ({selectedIds.size})</button>}
-                    {view === 'hidden' && <button onClick={() => handleBulkAction('unhide')} className="text-sm bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 disabled:opacity-50" disabled={selectedIds.size === 0 || isProcessing}>Unhide ({selectedIds.size})</button>}
-                     <button onClick={() => handleBulkAction('exportSelected')} className="text-sm bg-primary-500 text-white px-3 py-1.5 rounded-md hover:bg-primary-600 disabled:opacity-50" disabled={selectedIds.size === 0 || isProcessing}><DownloadCloudIcon className="w-4 h-4 inline-block mr-1" />Export ({selectedIds.size})</button>
+                    <button onClick={handleSelectAllVisible} className="text-sm bg-white dark:bg-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-sm">{selectedIds.size === listings.length && listings.length > 0 ? 'Deselect Page' : 'Select Page'}</button>
+                    <button onClick={handleSelectAll} disabled={isSelectingAll} className="text-sm bg-white dark:bg-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-sm flex items-center disabled:opacity-50">
+                        {isSelectingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : `Select All (${totalCount})`}
+                    </button>
+                    {selectedIds.size > 0 && <button onClick={handleClearSelection} className="text-sm bg-white dark:bg-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-sm">Clear ({selectedIds.size})</button>}
+                    
+                    {view === 'active' && <button onClick={() => handleBulkAction('hide')} className="text-sm bg-yellow-500 text-white px-3 py-1.5 rounded-md hover:bg-yellow-600 disabled:opacity-50 flex items-center" disabled={selectedIds.size === 0 || isProcessing}><EyeOffIcon className="w-4 h-4 inline-block mr-1" />Hide ({selectedIds.size})</button>}
+                    {view === 'hidden' && <button onClick={() => handleBulkAction('unhide')} className="text-sm bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 disabled:opacity-50 flex items-center" disabled={selectedIds.size === 0 || isProcessing}>Unhide ({selectedIds.size})</button>}
+                    
+                    {(view === 'active' || view === 'hidden') && <button onClick={() => handleBulkAction('archive')} className="text-sm bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 disabled:opacity-50 flex items-center" disabled={selectedIds.size === 0 || isProcessing}><ArchiveIcon className="w-4 h-4 inline-block mr-1" />Archive ({selectedIds.size})</button>}
+                    {view === 'archived' && <button onClick={() => handleBulkAction('unarchive')} className="text-sm bg-indigo-500 text-white px-3 py-1.5 rounded-md hover:bg-indigo-600 disabled:opacity-50 flex items-center" disabled={selectedIds.size === 0 || isProcessing}><ArchiveRestoreIcon className="w-4 h-4 inline-block mr-1" />Unarchive ({selectedIds.size})</button>}
+
+                    <button onClick={() => handleExport('selected')} className="text-sm bg-blue-500 text-white px-3 py-1.5 rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center" disabled={selectedIds.size === 0 || isExporting !== null}>
+                       {isExporting === 'selected' ? <Loader2 className="w-4 h-4 animate-spin" /> : <><DownloadCloudIcon className="w-4 h-4 inline-block mr-1" />Export Selected ({selectedIds.size})</>}
+                    </button>
+                     <button onClick={() => handleExport('all')} className="text-sm bg-primary-500 text-white px-3 py-1.5 rounded-md hover:bg-primary-600 disabled:opacity-50 flex items-center" disabled={isExporting !== null}>
+                        {isExporting === 'all' ? <Loader2 className="w-4 h-4 animate-spin" /> : <><DownloadCloudIcon className="w-4 h-4 inline-block mr-1" />Export All ({totalCount})</>}
+                    </button>
                 </div>
                  <div>
                     <select value={sort} onChange={(e) => setSort(e.target.value)} className="p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm">
@@ -204,7 +277,7 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ view, game }) => {
                     <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                         <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                             <tr>
-                                <th scope="col" className="p-4"><input type="checkbox" onChange={handleSelectAllVisible} checked={selectedIds.size === listings.length && listings.length > 0} /></th>
+                                <th scope="col" className="p-4"><input type="checkbox" onChange={handleSelectAllVisible} checked={selectedIds.size > 0 && listings.every(l => selectedIds.has(l.item_id))} /></th>
                                 {game.columns.map(col => <th key={col.id} scope="col" className="px-6 py-3 whitespace-nowrap" style={{minWidth: col.min_width}}>{col.label}</th>)}
                                 {view === 'archived' && <th scope="col" className="px-6 py-3 min-w-[12rem]">Archived Reason</th>}
                                 <th scope="col" className="px-6 py-3 whitespace-nowrap">Last Seen</th>

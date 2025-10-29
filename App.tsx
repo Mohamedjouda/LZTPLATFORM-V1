@@ -5,11 +5,12 @@ import MarketplacePage from './components/MarketplacePage';
 import GameManagementPage from './components/GameManagementPage';
 import SetupGuidePage from './components/SetupGuidePage';
 import { Loader2, SunIcon, MoonIcon, GameIcon, BookOpenIcon, AlertTriangle } from './components/Icons';
+import { NotificationProvider, useNotifications, NotificationBell } from './components/NotificationSystem';
 
 type Page = 'marketplace' | 'manage-games' | 'setup-guide';
 type Theme = 'light' | 'dark';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [page, setPage] = useState<Page>('marketplace');
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
@@ -17,6 +18,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>('light');
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme') as Theme | null;
@@ -46,6 +48,7 @@ const App: React.FC = () => {
       let fetchedGames = await getGames();
       
       if (dbReady && fetchedGames.length === 0) {
+        addNotification({ type: 'info', message: 'No games found, initializing default presets.', code: 'APP-100' });
         await initializeDefaultGames();
         fetchedGames = await getGames();
       }
@@ -59,18 +62,20 @@ const App: React.FC = () => {
       } else {
         setPage('manage-games');
       }
+      addNotification({ type: 'success', message: `Platform ready. ${fetchedGames.length} games loaded.`, code: 'APP-200'});
 
     } catch (err: any) {
       const friendlyError = err.message.includes('SUPABASE') || err.message.includes('LZT')
           ? `${err.message} Please check the Setup Guide for instructions.`
           : `An unexpected error occurred: ${err.message}`;
       setError(friendlyError);
+      addNotification({ type: 'error', message: friendlyError, code: 'APP-500' });
       console.error(err);
       setPage('setup-guide'); 
     } finally {
       setIsLoading(false);
     }
-  }, [selectedGameId]);
+  }, [selectedGameId, addNotification]);
 
   useEffect(() => {
     loadInitialData();
@@ -94,6 +99,7 @@ const App: React.FC = () => {
        }
     } catch (err: any) {
       setError(`Failed to refresh games: ${err.message}`);
+      addNotification({ type: 'error', message: `Failed to refresh games: ${err.message}`, code: 'APP-501' });
     } finally {
       setIsLoading(false);
     }
@@ -170,9 +176,12 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="flex items-center justify-between h-16 px-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 z-10 flex-shrink-0">
             <h1 className="text-xl font-semibold text-gray-800 dark:text-white">{pageTitle}</h1>
-            <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-900 transition-colors" aria-label="Toggle theme">
-                {theme === 'light' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
-            </button>
+            <div className="flex items-center space-x-2">
+              <NotificationBell />
+              <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-900 transition-colors" aria-label="Toggle theme">
+                  {theme === 'light' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
+              </button>
+            </div>
         </header>
         <div className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950">
             {error && page !== 'setup-guide' && (
@@ -191,5 +200,11 @@ const App: React.FC = () => {
     </div>
   );
 };
+
+const App: React.FC = () => (
+  <NotificationProvider>
+    <AppContent />
+  </NotificationProvider>
+);
 
 export default App;

@@ -1,13 +1,34 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getGames, upsertGame, deleteGame } from '../services/supabaseService';
+import { getGames, upsertGame } from '../services/supabaseService';
 import { gamePresets } from '../game-presets';
 import { Game, GameColumn, GameFilter, GameSort } from '../types';
 import { PlusIcon, EditIcon, Trash2Icon, XIcon, Loader2, AlertTriangle, ChevronDown, GripVertical, PlusCircleIcon } from './Icons';
+import { useNotifications } from './NotificationSystem';
 
 const emptyGame: Omit<Game, 'id' | 'created_at'> = {
     name: '', slug: '', category: '', description: '', api_base_url: 'https://prod-api.lzt.market', list_path: '', check_path_template: '',
-    default_filters: {}, columns: [], filters: [], sorts: []
+    default_filters: {}, columns: [], filters: [], sorts: [], fetch_worker_enabled: true, check_worker_enabled: true,
 };
+
+const ToggleSwitch: React.FC<{ enabled: boolean; onChange: () => void; disabled?: boolean; }> = ({ enabled, onChange, disabled }) => (
+  <button
+    type="button"
+    onClick={onChange}
+    disabled={disabled}
+    className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 ${
+      enabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
+    }`}
+    aria-checked={enabled}
+    role="switch"
+  >
+    <span
+      className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${
+        enabled ? 'translate-x-6' : 'translate-x-1'
+      }`}
+    />
+  </button>
+);
+
 
 const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGamesUpdated }) => {
     const [games, setGames] = useState<Game[]>([]);
@@ -15,6 +36,8 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
     const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedGame, setSelectedGame] = useState<Partial<Game> | null>(null);
+    const [isUpdating, setIsUpdating] = useState<number | null>(null);
+    const { addNotification } = useNotifications();
 
     const loadGames = useCallback(async () => {
         setIsLoading(true);
@@ -50,19 +73,25 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
         setSelectedGame(game);
         setIsModalOpen(true);
     };
-
-    const handleDelete = async (game: Game) => {
-        if (window.confirm(`Are you sure you want to delete "${game.name}"? All associated listings and logs will be permanently removed.`)) {
-            try {
-                if(game.id) {
-                    await deleteGame(game.id);
-                    onGamesUpdated();
-                    loadGames(); // Refresh list
-                }
-            } catch (err: any) {
-                setError(err.message);
-            }
-        }
+    
+    const handleToggle = async (game: Game, worker: 'fetch' | 'check') => {
+      setIsUpdating(game.id!);
+      const key = worker === 'fetch' ? 'fetch_worker_enabled' : 'check_worker_enabled';
+      const currentValue = game[key] ?? true;
+      const updatedGame = { ...game, [key]: !currentValue };
+      
+      try {
+        await upsertGame({ id: updatedGame.id, [key]: updatedGame[key] });
+        setGames(games.map(g => g.id === game.id ? updatedGame : g));
+        addNotification({ type: 'info', message: `${worker.charAt(0).toUpperCase() + worker.slice(1)} worker for '${game.name}' is now ${!currentValue ? 'enabled' : 'disabled'}.`, code: 'GM-202' });
+      } catch (err: any) {
+        const message = `Failed to update ${game.name}: ${err.message}`;
+        setError(message);
+        addNotification({ type: 'error', message, code: 'GM-502' });
+        setTimeout(() => setError(null), 3000);
+      } finally {
+        setIsUpdating(null);
+      }
     };
 
     const handleModalClose = () => {
@@ -73,11 +102,14 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
     const handleModalSave = async (gameToSave: Partial<Game>) => {
         try {
             await upsertGame(gameToSave);
+            addNotification({ type: 'success', message: `Game configuration for '${gameToSave.name}' saved successfully.`, code: 'GM-200' });
             handleModalClose();
             onGamesUpdated();
             loadGames();
         } catch (err: any) {
-            alert(`Error saving game: ${err.message}`);
+            const message = `Error saving game: ${err.message}`;
+            addNotification({ type: 'error', message, code: 'GM-501' });
+            alert(message);
         }
     };
 
@@ -106,6 +138,8 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Category</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">API Endpoint</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fetch Worker</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Check Worker</th>
                             <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
                         </tr>
                     </thead>
@@ -115,14 +149,27 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
                                 <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900 dark:text-white">{game.name}</div><div className="text-sm text-gray-500 dark:text-gray-400">{game.slug}</div></td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{game.category}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">{game.list_path || '/'}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <ToggleSwitch
+                                        enabled={game.fetch_worker_enabled ?? true}
+                                        onChange={() => handleToggle(game, 'fetch')}
+                                        disabled={isUpdating === game.id}
+                                    />
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <ToggleSwitch
+                                        enabled={game.check_worker_enabled ?? true}
+                                        onChange={() => handleToggle(game, 'check')}
+                                        disabled={isUpdating === game.id}
+                                    />
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button onClick={() => handleEdit(game)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 p-1"><EditIcon className="w-5 h-5" /></button>
-                                    <button onClick={() => handleDelete(game)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1"><Trash2Icon className="w-5 h-5" /></button>
                                 </td>
                             </tr>
                         ))}
                          {games.length === 0 && (
-                            <tr><td colSpan={4} className="text-center py-12 text-gray-500">No game configurations found. Add one to get started.</td></tr>
+                            <tr><td colSpan={6} className="text-center py-12 text-gray-500">No game configurations found. Add one to get started.</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -141,7 +188,7 @@ const PresetDropdown: React.FC<{onSelect: (key: string) => void}> = ({ onSelect 
                 <PlusIcon className="w-5 h-5 mr-2" /> Add from Preset <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
             </button>
             {isOpen && (
-                <div className="absolute z-10 mt-1 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg max-h-80 overflow-y-auto">
+                <div className="absolute z-10 mt-1 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg max-h-80 overflow-y-auto right-0">
                     {Object.entries(gamePresets).map(([key, preset]) => (
                         <button key={key} onClick={() => { onSelect(key); setIsOpen(false); }}
                             className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
