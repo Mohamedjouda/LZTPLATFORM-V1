@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GlobalSettings } from '../types';
 import { testSupabaseConnection, initializeDefaultGames, initSupabase } from '../services/supabaseService';
-import { Loader2 } from './Icons';
+import { Loader2, CheckCircle2, XCircle } from './Icons';
 
 const SCHEMA_SQL = `-- UGLP Schema v1.0
 -- This script sets up the necessary tables for the Unified Game Listings Platform.
@@ -212,6 +212,28 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onSave, currentSettings, in
                 </div>
             </div>
              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">The Bearer token used for all API requests.</p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Gemini API Status
+            </label>
+            <div className="mt-1">
+              {process.env.API_KEY ? (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                  Configured
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                  <XCircle className="w-4 h-4 mr-1.5" />
+                  Not Configured
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              The 'Deal Score' feature requires a Gemini API key. This key must be set as an environment variable named <code className="bg-gray-200 dark:bg-gray-600 px-1 py-0.5 rounded">API_KEY</code> in your deployment environment (e.g., cPanel environment variables, GitHub secrets). The application reads this automatically.
+            </p>
           </div>
 
           <div>
