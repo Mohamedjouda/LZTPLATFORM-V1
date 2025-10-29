@@ -66,6 +66,13 @@
 </head>
   <body class="bg-gray-100 dark:bg-gray-950">
     <div id="root"></div>
+    <script>
+      // Polyfill process.env for the browser environment
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
+      window.process.env.SUPABASE_URL = "https://reppasrxzgnnexowirwl.supabase.co";
+      window.process.env.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcHBhc3J4emdubmV4b3dpcndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MDA3NjksImV4cCI6MjA3NzE3Njc2OX0.ay3RjGrTlX_3K3AcAj1Rhnfhwv7Ff5SLAc_AKs8GUtM";
+    </script>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

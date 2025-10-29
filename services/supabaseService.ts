@@ -3,6 +3,8 @@ import { Listing, FetchLog, CheckLog, FilterState, GameSort, Game } from '../typ
 import { gamePresets } from '../game-presets';
 
 let supabase: SupabaseClient | null = null;
+let dbReady = false;
+let supabaseInitializationAttempted = false;
 
 const handleSupabaseError = (error: PostgrestError, context: string) => {
     console.error(`Supabase error (${context}):`, { message: error.message, details: error.details, hint: error.hint, code: error.code });
@@ -29,37 +31,66 @@ const handleFetchError = (error: any, context: string): never => {
     throw new Error(`An unexpected error occurred in ${context}: ${error.message || 'Unknown error'}`);
 };
 
+const limitedModeWarning = (context: string) => {
+    console.warn(`Supabase not configured or tables missing (${context}). App is in limited, in-memory mode.`);
+};
 
-export const initSupabase = () => {
+// Gracefully handle "table does not exist" errors by falling back to in-memory mode.
+const isTableMissingError = (error: PostgrestError): boolean => {
+    return error && (error.code === '42P01' || error.message.includes('does not exist'));
+};
+
+export const initSupabase = async (): Promise<{ supabase: SupabaseClient | null; dbReady: boolean }> => {
+  if (supabaseInitializationAttempted) {
+    return { supabase, dbReady };
+  }
+  supabaseInitializationAttempted = true;
+
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Supabase URL or Anon Key is not configured. Please set SUPABASE_URL and SUPABASE_ANON_KEY in your environment variables.");
+    console.warn("Supabase credentials not found. The app will run in a limited, in-memory mode. Please follow the Setup Guide to enable all features.");
+    supabase = null;
+    dbReady = false;
+  } else {
+    try {
+      supabase = createClient(supabaseUrl, supabaseAnonKey);
+      // Check for table existence to confirm DB is ready
+      const { error } = await supabase.from('games').select('id', { head: true, count: 'exact' });
+      
+      if (isTableMissingError(error)) {
+        console.warn("Supabase tables not found. The app will run in a limited, in-memory mode. Please run the SQL script in the Setup Guide.");
+        dbReady = false; 
+      } else if (error) {
+        console.error("An unexpected error occurred while checking Supabase tables:", error);
+        dbReady = false;
+      } else {
+        dbReady = true; 
+      }
+    } catch (e) {
+      console.error("Failed to create Supabase client. Please check your Supabase URL.", e);
+      supabase = null;
+      dbReady = false;
+    }
   }
-  
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
-  return supabase;
+  return { supabase, dbReady };
 };
 
-export const initializeDefaultGames = async () => {
-    if (!supabase) throw new Error("Supabase not initialized for seeding.");
-    try {
-        // First, check if the table exists at all by doing a head request.
-        const { error: headError } = await supabase.from('games').select('id', { count: 'exact', head: true });
-        
-        if (headError) {
-             // '42P01': undefined_table. This is the error we expect if the schema isn't set up.
-            if (headError.code === '42P01') {
-                throw new Error("The 'games' table does not exist. Please run the SQL script in the Setup Guide.");
-            }
-            // For other unexpected errors during the check.
-            handleSupabaseError(headError, 'initializeDefaultGames(check)');
-        }
 
+export const initializeDefaultGames = async () => {
+    if (!dbReady || !supabase) {
+        console.log("Supabase not configured, skipping database initialization.");
+        return;
+    }
+    try {
         const { count, error: countError } = await supabase.from('games').select('id', { count: 'exact', head: true });
 
-        if (countError) {
+        if (isTableMissingError(countError)) {
+            console.warn("Games table not found during initialization check. Aborting initialization.");
+            dbReady = false;
+            return;
+        } else if (countError) {
             handleSupabaseError(countError, 'initializeDefaultGames(count)');
         }
         
@@ -85,18 +116,30 @@ export const initializeDefaultGames = async () => {
 
 // GAME CONFIG
 export const getGames = async (): Promise<Game[]> => {
-    if (!supabase) throw new Error("Supabase not initialized");
+    if (!dbReady || !supabase) {
+        limitedModeWarning('getGames');
+        return Object.values(gamePresets).map((g, i) => ({ ...(g as Game), id: i + 1, created_at: new Date().toISOString() }));
+    }
     try {
         const { data, error } = await supabase.from('games').select('*').order('name', { ascending: true });
+        if (isTableMissingError(error)) {
+            dbReady = false;
+            limitedModeWarning('getGames (fallback)');
+            return Object.values(gamePresets).map((g, i) => ({ ...(g as Game), id: i + 1, created_at: new Date().toISOString() }));
+        }
         if (error) handleSupabaseError(error, 'getGames');
         return data || [];
     } catch (error) {
         handleFetchError(error, 'getGames');
+        return []; // Fallback
     }
 };
 
 export const upsertGame = async (game: Partial<Game>): Promise<Game> => {
-    if (!supabase) throw new Error("Supabase not initialized");
+    if (!dbReady || !supabase) {
+        alert("Database is not configured. Changes cannot be saved.");
+        throw new Error("Database not configured.");
+    }
     try {
         const { data, error } = await supabase.from('games').upsert(game).select().single();
         if (error) handleSupabaseError(error, 'upsertGame');
@@ -107,12 +150,15 @@ export const upsertGame = async (game: Partial<Game>): Promise<Game> => {
 }
 
 export const deleteGame = async (gameId: number): Promise<void> => {
-    if (!supabase) throw new Error("Supabase not initialized");
+    if (!dbReady || !supabase) {
+        alert("Database is not configured. Cannot delete game.");
+        throw new Error("Database not configured.");
+    }
     try {
         const tables = ['listings', 'fetch_logs', 'check_logs'];
         for (const table of tables) {
             const { error: deleteError } = await supabase.from(table).delete().eq('game_id', gameId);
-            if (deleteError) handleSupabaseError(deleteError, `deleteGame(${table})`);
+            if (deleteError && !isTableMissingError(deleteError)) handleSupabaseError(deleteError, `deleteGame(${table})`);
         }
         
         const { error: gameDeleteError } = await supabase.from('games').delete().eq('id', gameId);
@@ -125,7 +171,10 @@ export const deleteGame = async (gameId: number): Promise<void> => {
 
 // LISTINGS
 export const upsertListings = async (listings: Partial<Listing>[]) => {
-  if (!supabase) throw new Error("Supabase not initialized");
+  if (!dbReady || !supabase) {
+    limitedModeWarning('upsertListings');
+    return;
+  }
   if (listings.length === 0) return;
   try {
     const { data, error } = await supabase.from('listings').upsert(listings, { onConflict: 'item_id, game_id' });
@@ -137,7 +186,10 @@ export const upsertListings = async (listings: Partial<Listing>[]) => {
 };
 
 export const getListings = async (game: Game, view: 'active' | 'hidden' | 'archived', filters: FilterState, sortId: string, page: number, rowsPerPage: number): Promise<{ data: Listing[], count: number }> => {
-  if (!supabase) return { data: [], count: 0 };
+  if (!dbReady || !supabase) {
+    limitedModeWarning('getListings');
+    return { data: [], count: 0 };
+  }
   
   let query = supabase.from('listings').select('*', { count: 'exact' }).eq('game_id', game.id!);
 
@@ -173,6 +225,11 @@ export const getListings = async (game: Game, view: 'active' | 'hidden' | 'archi
 
   try {
       const { data, error, count } = await query;
+      if (isTableMissingError(error)) {
+        dbReady = false;
+        limitedModeWarning('getListings (fallback)');
+        return { data: [], count: 0 };
+      }
       if (error) handleSupabaseError(error, 'getListings');
       return { data: data || [], count: count || 0 };
   } catch (error) {
@@ -182,7 +239,10 @@ export const getListings = async (game: Game, view: 'active' | 'hidden' | 'archi
 };
 
 export const getListingsByIds = async (gameId: number, ids: number[]): Promise<Listing[]> => {
-    if (!supabase) throw new Error("Supabase not initialized");
+    if (!dbReady || !supabase) {
+        limitedModeWarning('getListingsByIds');
+        return [];
+    }
     if (ids.length === 0) return [];
     try {
         const { data, error } = await supabase.from('listings').select('*').eq('game_id', gameId).in('item_id', ids);
@@ -195,7 +255,10 @@ export const getListingsByIds = async (gameId: number, ids: number[]): Promise<L
 };
 
 export const updateListings = async (gameId: number, ids: number[], updates: Partial<Listing>) => {
-    if (!supabase) throw new Error("Supabase not initialized");
+    if (!dbReady || !supabase) {
+        alert("Database is not configured. Cannot update listings.");
+        return;
+    }
     try {
         const { data, error } = await supabase.from('listings').update(updates).eq('game_id', gameId).in('item_id', ids);
         if (error) handleSupabaseError(error, 'updateListings');
@@ -206,9 +269,17 @@ export const updateListings = async (gameId: number, ids: number[], updates: Par
 }
 
 export const getActiveListingsForCheck = async (gameId: number, cursorId: number, limit: number): Promise<Listing[]> => {
-    if (!supabase) throw new Error("Supabase not initialized");
+    if (!dbReady || !supabase) {
+        limitedModeWarning('getActiveListingsForCheck');
+        return [];
+    }
     try {
         const { data, error } = await supabase.from('listings').select('*').eq('game_id', gameId).eq('is_archived', false).gt('item_id', cursorId).order('item_id', { ascending: true }).limit(limit);
+        if (isTableMissingError(error)) {
+            dbReady = false;
+            limitedModeWarning('getActiveListingsForCheck (fallback)');
+            return [];
+        }
         if (error) handleSupabaseError(error, 'getActiveListingsForCheck');
         return data || [];
     } catch (error) {
@@ -218,9 +289,14 @@ export const getActiveListingsForCheck = async (gameId: number, cursorId: number
 }
 
 export const getDashboardCounts = async (gameId: number) => {
-    if (!supabase) throw new Error("Supabase not initialized");
+    const fallback = { active: 0, hidden: 0, archived: 0 };
+    if (!dbReady || !supabase) {
+        limitedModeWarning('getDashboardCounts');
+        return fallback;
+    }
     try {
         const { count: active, error: activeError } = await supabase.from('listings').select('*', { count: 'exact', head: true }).eq('game_id', gameId).eq('is_hidden', false).eq('is_archived', false);
+        if (isTableMissingError(activeError)) { dbReady = false; limitedModeWarning('getDashboardCounts (fallback)'); return fallback; }
         if (activeError) handleSupabaseError(activeError, 'getDashboardCounts (active)');
         
         const { count: hidden, error: hiddenError } = await supabase.from('listings').select('*', { count: 'exact', head: true }).eq('game_id', gameId).eq('is_hidden', true).eq('is_archived', false);
@@ -232,58 +308,84 @@ export const getDashboardCounts = async (gameId: number) => {
         return { active: active || 0, hidden: hidden || 0, archived: archived || 0 };
     } catch (error) {
         handleFetchError(error, 'getDashboardCounts');
-        return { active: 0, hidden: 0, archived: 0 };
+        return fallback;
     }
 }
 
 // LOGS
 export const addFetchLog = async (log: FetchLog) => {
-  if (!supabase) throw new Error("Supabase not initialized");
-  if (log.items_fetched === 0) return; // Don't log empty fetches
+  if (!dbReady || !supabase) {
+    limitedModeWarning('addFetchLog');
+    return;
+  }
+  if (log.items_fetched === 0) return;
   try {
     const { data, error } = await supabase.from('fetch_logs').insert(log);
-    if (error) handleSupabaseError(error, 'addFetchLog');
-    return data;
+    if (error && !isTableMissingError(error)) handleSupabaseError(error, 'addFetchLog');
   } catch (error) { handleFetchError(error, 'addFetchLog'); }
 };
 
-export const addCheckLog = async (log: CheckLog) => {
-    if (!supabase) throw new Error("Supabase not initialized");
+export const addCheckLog = async (log: CheckLog): Promise<CheckLog | null> => {
+    if (!dbReady || !supabase) {
+        limitedModeWarning('addCheckLog');
+        return null;
+    }
     try {
         const { data, error } = await supabase.from('check_logs').insert(log).select().single();
-        if (error) handleSupabaseError(error, 'addCheckLog');
+        if (error && !isTableMissingError(error)) handleSupabaseError(error, 'addCheckLog');
         return data;
-    } catch (error) { handleFetchError(error, 'addCheckLog'); }
+    } catch (error) { 
+      handleFetchError(error, 'addCheckLog');
+      return null;
+    }
 };
 
 export const updateCheckLog = async (logId: string, updates: Partial<CheckLog>) => {
-  if (!supabase) throw new Error("Supabase not initialized");
+  if (!dbReady || !supabase) {
+    limitedModeWarning('updateCheckLog');
+    return;
+  }
   try {
     const { data, error } = await supabase.from('check_logs').update(updates).eq('id', logId);
-    if (error) handleSupabaseError(error, 'updateCheckLog');
+    if (error && !isTableMissingError(error)) handleSupabaseError(error, 'updateCheckLog');
     return data;
   } catch(error) { handleFetchError(error, 'updateCheckLog'); }
 }
 
 export const getLatestLogs = async (gameId: number): Promise<{ fetchLogs: FetchLog[], checkLogs: CheckLog[] }> => {
-    if (!supabase) return { fetchLogs: [], checkLogs: [] };
+    const fallback = { fetchLogs: [], checkLogs: [] };
+    if (!dbReady || !supabase) {
+        limitedModeWarning('getLatestLogs');
+        return fallback;
+    }
     try {
         const [fetchLogsRes, checkLogsRes] = await Promise.all([
             supabase.from('fetch_logs').select('*').eq('game_id', gameId).order('created_at', { ascending: false }).limit(50),
             supabase.from('check_logs').select('*').eq('game_id', gameId).order('created_at', { ascending: false }).limit(50)
         ]);
+
+        if (isTableMissingError(fetchLogsRes.error!) || isTableMissingError(checkLogsRes.error!)) {
+            dbReady = false;
+            limitedModeWarning('getLatestLogs (fallback)');
+            return fallback;
+        }
+
         if (fetchLogsRes.error) handleSupabaseError(fetchLogsRes.error, 'getLatestLogs(fetch)');
         if (checkLogsRes.error) handleSupabaseError(checkLogsRes.error, 'getLatestLogs(check)');
+        
         return { fetchLogs: fetchLogsRes.data || [], checkLogs: checkLogsRes.data || [] };
     } catch(error) {
         handleFetchError(error, 'getLatestLogs');
-        return { fetchLogs: [], checkLogs: [] };
+        return fallback;
     }
 }
 
 // EXPORT
 export const exportToFile = async (listings: Listing[], fileName: string): Promise<string> => {
-    if (!supabase) throw new Error("Supabase not initialized");
+    if (!dbReady || !supabase) {
+        alert("Database is not configured. Cannot export file via Supabase storage.");
+        throw new Error("Database not configured.");
+    }
     if (listings.length === 0) throw new Error("No listings to export.");
 
     const headers = Object.keys(listings[0]).join(',');

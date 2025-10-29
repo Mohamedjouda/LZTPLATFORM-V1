@@ -1,5 +1,5 @@
 {
-  "name": "Unified Game Listings Platform",
-  "description": "A dynamic, multi-game platform to automatically fetch, analyze, and manage game account listings from various APIs. Configure new games, customize columns and filters, and leverage a unified interface for all your data, stored and managed via Supabase.",
+  "name": "LZT Market Browser",
+  "description": "A comprehensive tool to browse, filter, and analyze game account listings from the LZT Market API across all supported games. Features dynamic configurations for each game, advanced filtering, and a unified interface.",
   "requestFramePermissions": []
 }

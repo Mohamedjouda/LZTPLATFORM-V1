@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Game } from './types';
 import { initSupabase, getGames, initializeDefaultGames } from './services/supabaseService';
-import GameDashboard from './components/GameDashboard';
+import MarketplacePage from './components/MarketplacePage';
 import GameManagementPage from './components/GameManagementPage';
 import SetupGuidePage from './components/SetupGuidePage';
 import { Loader2, SunIcon, MoonIcon, GameIcon, BookOpenIcon, AlertTriangle } from './components/Icons';
 
-type Page = 'game-dashboard' | 'manage-games' | 'setup-guide';
+type Page = 'marketplace' | 'manage-games' | 'setup-guide';
 type Theme = 'light' | 'dark';
 
 const App: React.FC = () => {
-  const [page, setPage] = useState<Page>('game-dashboard');
+  const [page, setPage] = useState<Page>('marketplace');
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -42,24 +42,26 @@ const App: React.FC = () => {
     setError(null);
     setIsLoading(true);
     try {
-      initSupabase();
+      const { dbReady } = await initSupabase();
       let fetchedGames = await getGames();
       
-      if (fetchedGames.length === 0) {
+      if (dbReady && fetchedGames.length === 0) {
         await initializeDefaultGames();
         fetchedGames = await getGames();
       }
 
       setGames(fetchedGames);
-      if (fetchedGames.length > 0) {
+      if (fetchedGames.length > 0 && !selectedGameId) {
         setSelectedGameId(fetchedGames[0].id!);
-        setPage('game-dashboard');
+        setPage('marketplace');
+      } else if (fetchedGames.length > 0) {
+        // A game is already selected, do nothing
       } else {
         setPage('manage-games');
       }
 
     } catch (err: any) {
-      const friendlyError = err.message.includes('SUPABASE') || err.message.includes('LZT') || err.message.includes('tables do not exist')
+      const friendlyError = err.message.includes('SUPABASE') || err.message.includes('LZT')
           ? `${err.message} Please check the Setup Guide for instructions.`
           : `An unexpected error occurred: ${err.message}`;
       setError(friendlyError);
@@ -68,7 +70,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedGameId]);
 
   useEffect(() => {
     loadInitialData();
@@ -76,7 +78,7 @@ const App: React.FC = () => {
 
   const handleGameSelect = (gameId: number) => {
     setSelectedGameId(gameId);
-    setPage('game-dashboard');
+    setPage('marketplace');
   };
   
   const handleGamesUpdated = async () => {
@@ -86,7 +88,7 @@ const App: React.FC = () => {
       setGames(fetchedGames);
        if (games.length > 0 && !selectedGameId) {
             setSelectedGameId(games[0].id!);
-            setPage('game-dashboard');
+            setPage('marketplace');
        } else if (games.length === 0) {
             setPage('manage-games');
        }
@@ -103,7 +105,7 @@ const App: React.FC = () => {
 
   const pageTitle = useMemo(() => {
     switch(page) {
-      case 'game-dashboard': return selectedGame?.name || "Game Dashboard";
+      case 'marketplace': return selectedGame?.name || "Marketplace";
       case 'manage-games': return "Manage Games";
       case 'setup-guide': return "Setup Guide";
       default: return "U.G.L.P.";
@@ -116,8 +118,8 @@ const App: React.FC = () => {
     }
     
     switch (page) {
-      case 'game-dashboard':
-        return selectedGame ? <GameDashboard key={selectedGame.id} game={selectedGame} /> : 
+      case 'marketplace':
+        return selectedGame ? <MarketplacePage key={selectedGame.id} game={selectedGame} /> : 
           <div className="text-center p-8">
             <h2 className="text-xl font-semibold">No games configured.</h2>
             <p className="text-gray-500 mt-2">Please add a game configuration in the 'Manage Games' section.</p>
@@ -127,7 +129,7 @@ const App: React.FC = () => {
       case 'setup-guide':
         return <SetupGuidePage />;
       default:
-        return <div className="text-center p-8">Welcome! Please select a game to view its dashboard.</div>;
+        return <div className="text-center p-8">Welcome! Please select a game to view its marketplace.</div>;
     }
   };
 
@@ -155,7 +157,7 @@ const App: React.FC = () => {
               key={game.id} 
               icon={<div className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-xs font-bold bg-gray-600 rounded-md">{game.name.substring(0,2).toUpperCase()}</div>} 
               label={game.name} 
-              active={page === 'game-dashboard' && selectedGameId === game.id} 
+              active={page === 'marketplace' && selectedGameId === game.id} 
               onClick={() => handleGameSelect(game.id!)} 
             />
           ))}

@@ -1,5 +1,3 @@
-// FIX: Removed self-import of GameColumn, GameFilter, and GameSort which were declared in this file, causing a conflict.
-
 export interface Game {
   id?: number;
   created_at?: string;
