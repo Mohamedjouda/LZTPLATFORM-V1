@@ -19,7 +19,9 @@ CREATE TABLE public.games (
     default_filters jsonb,
     columns jsonb,
     filters jsonb,
-    sorts jsonb
+    sorts jsonb,
+    fetch_worker_enabled boolean DEFAULT true,
+    check_worker_enabled boolean DEFAULT true
 );
 COMMENT ON TABLE public.games IS 'Stores configurations for each game supported by the platform.';
 
@@ -101,7 +103,7 @@ const SetupGuidePage: React.FC = () => {
                 <h2 className="step-title">Step 1: Set Up Supabase Database</h2>
                 <ol className="step-list">
                     <li>Go to <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer" className="link">supabase.com</a> and create a new project.</li>
-                    <li>Navigate to your project's **Settings > API**.</li>
+                    <li>Navigate to your project's **Settings {'>'} API**.</li>
                     <li>Find your **Project URL** and **Project API Keys** (you need the `anon` `public` key).</li>
                 </ol>
             </div>
