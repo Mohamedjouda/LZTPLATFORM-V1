@@ -6,6 +6,10 @@ let supabase: SupabaseClient | null = null;
 let dbReady = false;
 let supabaseInitializationAttempted = false;
 
+// Expose the client and readiness state for other parts of the app, like real-time status checks.
+export const getSupabaseClient = () => supabase;
+export const isDbReady = () => dbReady;
+
 const handleSupabaseError = (error: PostgrestError, context: string) => {
     console.error(`Supabase error (${context}):`, { message: error.message, details: error.details, hint: error.hint, code: error.code });
     const message = error.message || 'An unknown Supabase error occurred';
