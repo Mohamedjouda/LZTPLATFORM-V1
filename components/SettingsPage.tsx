@@ -86,16 +86,17 @@ CREATE INDEX check_logs_game_id_created_at_idx ON public.check_logs USING btree 
 interface SettingsPageProps {
   onSave: (settings: GlobalSettings) => void;
   currentSettings: GlobalSettings | null;
+  initialError?: string | null;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ onSave, currentSettings }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ onSave, currentSettings, initialError }) => {
   const [lztApiToken, setLztApiToken] = useState('');
   const [supabaseUrl, setSupabaseUrl] = useState('');
   const [supabaseAnonKey, setSupabaseAnonKey] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(initialError || null);
   const [schemaSetupRequired, setSchemaSetupRequired] = useState(false);
   const [sqlCopied, setSqlCopied] = useState(false);
 

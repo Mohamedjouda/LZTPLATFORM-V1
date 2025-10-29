@@ -40,8 +40,9 @@ const App: React.FC = () => {
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  const loadDataOnMount = useCallback(async (currentSettings: GlobalSettings) => {
+  const loadDataAndNavigate = useCallback(async (currentSettings: GlobalSettings) => {
     setError(null);
+    setIsLoading(true);
     try {
       const supabase = initSupabase(currentSettings.supabaseUrl, currentSettings.supabaseAnonKey);
       if (supabase) {
@@ -49,15 +50,23 @@ const App: React.FC = () => {
         setGames(fetchedGames);
         if (fetchedGames.length > 0) {
           setSelectedGameId(fetchedGames[0].id!);
+          setPage('game-dashboard');
+        } else {
+          setPage('manage-games');
         }
+      } else {
+        // This case should ideally not happen if settings are present, but as a fallback:
+        setPage('settings');
       }
     } catch (err: any) {
-      setError(`Failed to load initial data: ${err.message}`);
+      setError(`Failed to load initial data: ${err.message}. Please check your settings.`);
       console.error(err);
+      setPage('settings'); // Fallback to settings page on error
     } finally {
       setIsLoading(false);
     }
   }, []);
+
 
   useEffect(() => {
     try {
@@ -65,38 +74,24 @@ const App: React.FC = () => {
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
         setSettings(parsed);
-        setIsLoading(true);
-        loadDataOnMount(parsed);
+        loadDataAndNavigate(parsed);
       } else {
         setIsLoading(false);
+        setPage('settings');
       }
     } catch (error) {
-      console.error("Failed to load settings:", error);
+      console.error("Failed to load or parse settings, clearing them:", error);
+      localStorage.removeItem('unified-listings-platform-settings');
       setIsLoading(false);
+      setPage('settings');
     }
-  }, [loadDataOnMount]);
+  }, [loadDataAndNavigate]);
 
   const handleSettingsSave = useCallback(async (newSettings: GlobalSettings) => {
     setSettings(newSettings);
     localStorage.setItem('unified-listings-platform-settings', JSON.stringify(newSettings));
-    setIsLoading(true);
-    setError(null);
-    try {
-      initSupabase(newSettings.supabaseUrl, newSettings.supabaseAnonKey);
-      const fetchedGames = await getGames();
-      setGames(fetchedGames);
-      if (fetchedGames.length > 0) {
-        setSelectedGameId(fetchedGames[0].id!);
-        setPage('game-dashboard');
-      } else {
-        setPage('manage-games');
-      }
-    } catch (err: any) {
-       setError(`Failed to save settings and load games: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    await loadDataAndNavigate(newSettings);
+  }, [loadDataAndNavigate]);
 
   const handleGameSelect = (gameId: number) => {
     setSelectedGameId(gameId);
@@ -135,14 +130,16 @@ const App: React.FC = () => {
     if (isLoading) {
       return <div className="flex items-center justify-center h-full"><Loader2 className="w-12 h-12 animate-spin text-primary-500" /></div>;
     }
-    if (error) {
-        return <div className="p-4 m-4 bg-red-100 text-red-700 rounded-lg">{error}</div>;
-    }
-
-    if (!settings && page !== 'settings') {
+    
+    // Always show settings page if settings are not set, regardless of current page state
+    if (!settings) {
       return <SettingsPage onSave={handleSettingsSave} currentSettings={settings} />;
     }
     
+    if (error && page === 'settings') {
+        return <SettingsPage onSave={handleSettingsSave} currentSettings={settings} initialError={error} />;
+    }
+
     switch (page) {
       case 'game-dashboard':
         return selectedGame ? <GameDashboard key={selectedGame.id} game={selectedGame} settings={settings!} /> : <div>Select a game</div>;
@@ -153,7 +150,8 @@ const App: React.FC = () => {
       case 'api-info':
         return <ApiInfoPage />;
       default:
-        return <div>Welcome! Please configure your settings and add a game.</div>;
+        // This case should ideally not be reached if settings are configured
+        return <SettingsPage onSave={handleSettingsSave} currentSettings={settings} />;
     }
   };
 
@@ -174,7 +172,7 @@ const App: React.FC = () => {
           </button>
         </div>
         <nav className="flex-1 px-2 py-4 space-y-2 overflow-y-auto">
-          <NavItem icon={<GameIcon className="w-6 h-6 flex-shrink-0" />} label="Manage Games" active={page === 'manage-games'} onClick={() => setPage('manage-games')} />
+          <NavItem icon={<GameIcon className="w-6 h-6 flex-shrink-0" />} label="Manage Games" active={page === 'manage-games'} onClick={() => settings && setPage('manage-games')} />
           <hr className="my-2 border-gray-700/50"/>
           {games.map(game => (
             <NavItem 
@@ -182,12 +180,12 @@ const App: React.FC = () => {
               icon={<div className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-xs font-bold bg-gray-600 rounded-md">{game.name.substring(0,2).toUpperCase()}</div>} 
               label={game.name} 
               active={page === 'game-dashboard' && selectedGameId === game.id} 
-              onClick={() => handleGameSelect(game.id!)} 
+              onClick={() => settings && handleGameSelect(game.id!)} 
             />
           ))}
         </nav>
         <div className="px-2 py-4 border-t border-gray-700/50 space-y-2">
-          <NavItem icon={<InfoIcon className="w-6 h-6 flex-shrink-0" />} label="API Info" active={page === 'api-info'} onClick={() => setPage('api-info')} />
+          <NavItem icon={<InfoIcon className="w-6 h-6 flex-shrink-0" />} label="API Info" active={page === 'api-info'} onClick={() => settings && setPage('api-info')} />
           <NavItem icon={<SettingsIcon className="w-6 h-6 flex-shrink-0" />} label="Settings" active={page === 'settings'} onClick={() => setPage('settings')} />
         </div>
       </aside>
