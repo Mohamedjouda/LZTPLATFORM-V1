@@ -1,7 +1,7 @@
 // server.js
-const express = require('express');
-const mysql = require('mysql2/promise');
-const { v4: uuidv4 } = require('uuid');
+import express from 'express';
+import mysql from 'mysql2/promise';
+import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 const port = 3001;
