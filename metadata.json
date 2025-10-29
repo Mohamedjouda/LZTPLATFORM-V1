@@ -1,0 +1,5 @@
+{
+  "name": "Unified Game Listings Platform",
+  "description": "A dynamic, multi-game platform to automatically fetch, analyze, and manage game account listings from various APIs. Configure new games, customize columns and filters, and leverage a unified interface for all your data, stored and managed via Supabase.",
+  "requestFramePermissions": []
+}
