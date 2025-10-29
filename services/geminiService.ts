@@ -45,8 +45,8 @@ export const calculateDealScore = async (listing: Partial<Listing>, game: Game):
       contents: prompt,
     });
     
-    // FIX: Use optional chaining for robustness in case `response.text` is not available.
-    const text = response.text?.trim();
+    // FIX: Per @google/genai guidelines, use the .text property to access the model's response. The optional chaining `?.` is incorrect.
+    const text = response.text.trim();
     const score = parseInt(text, 10);
 
     if (!isNaN(score) && score >= 1 && score <= 100) {

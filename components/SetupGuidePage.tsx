@@ -2,58 +2,93 @@ import React, { useState } from 'react';
 
 // Unused imports removed for cleanliness.
 
-// FIX: The SQL script had unnecessary backslash escaping for table/column names (e.g., \`games\`).
-// This can cause some build tools to fail with misleading errors.
-// The backslashes have been removed.
-const sqlScript = `-- U.G.L.P. MySQL Schema v1.0
+// FIX: Updated the SQL script to v1.1 and removed unnecessary backslash escapes.
+const sqlScript = `-- U.G.L.P. MySQL Schema v1.1
 -- This script is for setting up the database on a standard MySQL/MariaDB server (like on aapanel).
+-- It is idempotent and can be run multiple times safely.
 
-CREATE TABLE IF NOT EXISTS `games` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `name` TEXT NOT NULL,
-  `slug` TEXT NOT NULL,
-  `category` TEXT,
-  `description` TEXT,
-  `api_base_url` TEXT NOT NULL,
-  `list_path` TEXT,
-  `check_path_template` TEXT,
-  `default_filters` JSON,
-  `columns` JSON,
-  `filters` JSON,
-  `sorts` JSON,
-  `fetch_worker_enabled` BOOLEAN DEFAULT TRUE,
-  `check_worker_enabled` BOOLEAN DEFAULT TRUE,
-  PRIMARY KEY (`id`)
+-- Create the main 'games' table to store configurations
+CREATE TABLE IF NOT EXISTS \`games\` (
+  \`id\` BIGINT NOT NULL AUTO_INCREMENT,
+  \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  \`name\` TEXT NOT NULL,
+  \`slug\` TEXT NOT NULL,
+  \`category\` TEXT,
+  \`description\` TEXT,
+  \`api_base_url\` TEXT NOT NULL,
+  \`list_path\` TEXT,
+  \`check_path_template\` TEXT,
+  \`default_filters\` JSON,
+  \`columns\` JSON,
+  \`filters\` JSON,
+  \`sorts\` JSON,
+  \`fetch_worker_enabled\` BOOLEAN DEFAULT TRUE,
+  \`check_worker_enabled\` BOOLEAN DEFAULT TRUE,
+  PRIMARY KEY (\`id\`)
 );
 
-CREATE TABLE IF NOT EXISTS `listings` (
-  `item_id` BIGINT NOT NULL,
-  `game_id` BIGINT NOT NULL,
-  `url` TEXT,
-  `title` TEXT,
-  `price` FLOAT,
-  `currency` TEXT,
-  `game_specific_data` JSON,
-  `deal_score` SMALLINT,
-  `is_hidden` BOOLEAN NOT NULL DEFAULT FALSE,
-  `is_archived` BOOLEAN NOT NULL DEFAULT FALSE,
-  `archived_reason` TEXT,
-  `first_seen_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `last_seen_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `archived_at` TIMESTAMP NULL,
-  `raw_response` JSON,
-  PRIMARY KEY (`item_id`, `game_id`),
-  FOREIGN KEY (`game_id`) REFERENCES `games`(`id`) ON DELETE CASCADE
+-- Create the 'listings' table to store fetched data
+CREATE TABLE IF NOT EXISTS \`listings\` (
+  \`item_id\` BIGINT NOT NULL,
+  \`game_id\` BIGINT NOT NULL,
+  \`url\` TEXT,
+  \`title\` TEXT,
+  \`price\` FLOAT,
+  \`currency\` TEXT,
+  \`game_specific_data\` JSON,
+  \`deal_score\` SMALLINT,
+  \`is_hidden\` BOOLEAN NOT NULL DEFAULT FALSE,
+  \`is_archived\` BOOLEAN NOT NULL DEFAULT FALSE,
+  \`archived_reason\` TEXT,
+  \`first_seen_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  \`last_seen_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  \`archived_at\` TIMESTAMP NULL,
+  \`raw_response\` JSON,
+  PRIMARY KEY (\`item_id\`, \`game_id\`),
+  CONSTRAINT \`fk_game_id\` FOREIGN KEY (\`game_id\`) REFERENCES \`games\`(\`id\`) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS `settings` (
-  `key` VARCHAR(255) NOT NULL,
-  `value` TEXT,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`key`)
+-- Create the 'settings' table for storing API keys and other configurations
+CREATE TABLE IF NOT EXISTS \`settings\` (
+  \`key\` VARCHAR(255) NOT NULL,
+  \`value\` TEXT,
+  \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (\`key\`)
 );
+
+-- Create the 'fetch_logs' table for logging fetch worker activity
+CREATE TABLE IF NOT EXISTS \`fetch_logs\` (
+  \`id\` CHAR(36) NOT NULL,
+  \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  \`game_id\` BIGINT NOT NULL,
+  \`page\` INT,
+  \`items_fetched\` INT,
+  \`status\` VARCHAR(50),
+  \`error_message\` TEXT,
+  \`duration_ms\` INT,
+  PRIMARY KEY (\`id\`),
+  FOREIGN KEY (\`game_id\`) REFERENCES \`games\`(\`id\`) ON DELETE CASCADE
+);
+
+-- Create the 'check_logs' table for logging check worker activity
+CREATE TABLE IF NOT EXISTS \`check_logs\` (
+  \`id\` CHAR(36) NOT NULL,
+  \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  \`game_id\` BIGINT NOT NULL,
+  \`items_checked\` INT,
+  \`items_archived\` INT,
+  \`status\` VARCHAR(50),
+  \`error_message\` TEXT,
+  \`duration_ms\` INT,
+  PRIMARY KEY (\`id\`),
+  FOREIGN KEY (\`game_id\`) REFERENCES \`games\`(\`id\`) ON DELETE CASCADE
+);
+
+-- Add some indexes for better query performance
+CREATE INDEX IF NOT EXISTS \`idx_listings_game_id_status\` ON \`listings\` (\`game_id\`, \`is_hidden\`, \`is_archived\`);
+CREATE INDEX IF NOT EXISTS \`idx_fetch_logs_game_id_created_at\` ON \`fetch_logs\` (\`game_id\`, \`created_at\` DESC);
+CREATE INDEX IF NOT EXISTS \`idx_check_logs_game_id_created_at\` ON \`check_logs\` (\`game_id\`, \`created_at\` DESC);
 `;
 
 const serverJsConfig = `// server.js
