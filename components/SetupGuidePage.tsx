@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 
 // Unused imports removed for cleanliness.
 
-// FIX: Updated the SQL script to v1.1 and removed unnecessary backslash escapes.
 const sqlScript = `-- U.G.L.P. MySQL Schema v1.1
 -- This script is for setting up the database on a standard MySQL/MariaDB server (like on aapanel).
 -- It is idempotent and can be run multiple times safely.

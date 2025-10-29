@@ -1,5 +1,4 @@
 import { FilterState, Game } from '../types';
-// FIX: The getSetting function has been moved to apiService.ts
 import { getSetting } from './apiService';
 
 let lztApiToken: string | null = null;

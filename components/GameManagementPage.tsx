@@ -1,13 +1,15 @@
+
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getGames, upsertGame } from '../services/apiService';
 import { gamePresets } from '../game-presets';
 import { Game, GameColumn, GameFilter, GameSort } from '../types';
-import { PlusIcon, EditIcon, Trash2Icon, XIcon, Loader2, AlertTriangle, ChevronDown, GripVertical, PlusCircleIcon } from './Icons';
+import { PlusIcon, EditIcon, Trash2Icon, XIcon, Loader2, AlertTriangle, ChevronDown, GripVertical, PlusCircleIcon, CogIcon } from './Icons';
 import { useNotifications } from './NotificationSystem';
 
 const emptyGame: Omit<Game, 'id' | 'created_at'> = {
     name: '', slug: '', category: '', description: '', api_base_url: 'https://prod-api.lzt.market', list_path: '', check_path_template: '',
-    default_filters: {}, columns: [], filters: [], sorts: [], fetch_worker_enabled: true, check_worker_enabled: true,
+    default_filters: {}, columns: [], filters: [], sorts: [], fetch_worker_enabled: true, check_worker_enabled: true, fetch_interval_minutes: 60, fetch_page_limit: 10
 };
 
 const ToggleSwitch: React.FC<{ enabled: boolean; onChange: () => void; disabled?: boolean; }> = ({ enabled, onChange, disabled }) => (
@@ -36,6 +38,7 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
     const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedGame, setSelectedGame] = useState<Partial<Game> | null>(null);
+    const [editingFetchSettings, setEditingFetchSettings] = useState<Game | null>(null);
     const [isUpdating, setIsUpdating] = useState<number | null>(null);
     const { addNotification } = useNotifications();
 
@@ -113,6 +116,19 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
         }
     };
 
+    const handleFetchSettingsSave = async (gameToSave: Partial<Game>) => {
+        try {
+            await upsertGame(gameToSave);
+            addNotification({ type: 'success', message: `Fetch settings for '${gameToSave.name}' saved.`, code: 'GM-201' });
+            setEditingFetchSettings(null);
+            loadGames(); // Refresh data
+        } catch (err: any) {
+            const message = `Error saving fetch settings: ${err.message}`;
+            addNotification({ type: 'error', message, code: 'GM-503' });
+            alert(message);
+        }
+    };
+
     if (isLoading) {
         return <div className="flex justify-center items-center h-64"><Loader2 className="w-12 h-12 animate-spin text-primary-500"/></div>;
     }
@@ -163,8 +179,9 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
                                         disabled={isUpdating === game.id}
                                     />
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button onClick={() => handleEdit(game)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 p-1"><EditIcon className="w-5 h-5" /></button>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                    <button onClick={() => setEditingFetchSettings(game)} className="text-gray-400 hover:text-blue-500 p-1" title="Fetch Settings"><CogIcon className="w-5 h-5" /></button>
+                                    <button onClick={() => handleEdit(game)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 p-1" title="Edit Game"><EditIcon className="w-5 h-5" /></button>
                                 </td>
                             </tr>
                         ))}
@@ -175,9 +192,46 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
                 </table>
             </div>
             {isModalOpen && selectedGame && <GameModal game={selectedGame} onClose={handleModalClose} onSave={handleModalSave} />}
+            {editingFetchSettings && <FetchSettingsModal game={editingFetchSettings} onClose={() => setEditingFetchSettings(null)} onSave={handleFetchSettingsSave} />}
         </div>
     );
 };
+
+const FetchSettingsModal: React.FC<{ game: Game, onClose: () => void, onSave: (game: Partial<Game>) => void }> = ({ game, onClose, onSave }) => {
+    const [interval, setInterval] = useState(game.fetch_interval_minutes ?? 60);
+    const [limit, setLimit] = useState(game.fetch_page_limit ?? 10);
+
+    const handleSave = () => {
+        onSave({
+            id: game.id,
+            name: game.name, // Pass name for notification clarity
+            fetch_interval_minutes: Number(interval),
+            fetch_page_limit: Number(limit),
+        });
+    };
+
+    return (
+        <EditorModalBase title={`Fetch Settings for ${game.name}`} onClose={onClose} onSave={handleSave}>
+             <Input
+                label="Fetch Interval (minutes)"
+                type="number"
+                value={interval}
+                onChange={e => setInterval(Number(e.target.value))}
+                min="1"
+                helperText="How often the fetch worker should run automatically."
+            />
+            <Input
+                label="Page Limit"
+                type="number"
+                value={limit}
+                onChange={e => setLimit(Number(e.target.value))}
+                min="1"
+                max="100"
+                helperText="Max number of pages to fetch in a single run to avoid long tasks."
+            />
+        </EditorModalBase>
+    );
+}
 
 // ... (The rest of the file remains the same, no need to repeat it)
 const PresetDropdown: React.FC<{onSelect: (key: string) => void}> = ({ onSelect }) => {
@@ -442,10 +496,11 @@ const SortEditor: React.FC<{ item: GameSort, onSave: (item: GameSort) => void, o
 };
 
 // Generic Form Components for Modals
-const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & {label: string}> = ({label, ...props}) => (
+const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & {label: string, helperText?: string}> = ({label, helperText, ...props}) => (
     <div>
         <label htmlFor={props.name || label} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
         <input {...props} id={props.name || label} className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 p-2" />
+        {helperText && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{helperText}</p>}
     </div>
 );
 

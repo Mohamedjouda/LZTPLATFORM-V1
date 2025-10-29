@@ -186,7 +186,6 @@ export const riotPreset: Omit<Game, 'id' | 'created_at'> = {
   ],
 };
 
-// FIX: Define wotPreset to be used by World of Tanks and WoT Blitz presets.
 const wotPreset = {
   category: 'MMO / Tanks',
   description: 'World of Tanks universe accounts (PC & Blitz) defined by statistics and premium tanks.',

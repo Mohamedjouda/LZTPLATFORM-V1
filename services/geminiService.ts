@@ -1,15 +1,16 @@
-import { GoogleGenAI } from "@google/genai";
+
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Listing, Game } from '../types';
 
 let ai: GoogleGenAI | null = null;
 
 const getAIClient = () => {
   if (!ai) {
-    if (!process.env.API_KEY) {
-      console.error("Gemini API key is not set in environment variables.");
+    if (!window.process?.env?.API_KEY || window.process.env.API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+      console.error("Gemini API key is not set in environment variables or is a placeholder.");
       return null;
     }
-    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    ai = new GoogleGenAI({ apiKey: window.process.env.API_KEY });
   }
   return ai;
 };
@@ -40,12 +41,11 @@ export const calculateDealScore = async (listing: Partial<Listing>, game: Game):
   `;
 
   try {
-    const response = await client.models.generateContent({
+    const response: GenerateContentResponse = await client.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
     
-    // FIX: Per @google/genai guidelines, use the .text property to access the model's response. The optional chaining `?.` is incorrect.
     const text = response.text.trim();
     const score = parseInt(text, 10);
 

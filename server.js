@@ -1,209 +1,351 @@
-// U.G.L.P. Self-Hosted Backend
-import express from 'express';
-import mysql from 'mysql2/promise';
-import cors from 'cors';
+// server.js
+const express = require('express');
+const mysql = require('mysql2/promise');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
-const port = 3001; // The port our backend will run on
+const port = 3001;
 
-app.use(cors());
-app.use(express.json());
-
-// --- DATABASE CONNECTION ---
-// IMPORTANT: Replace these with your actual database credentials from aapanel
+// --- Database Configuration ---
+// IMPORTANT: Replace these with your actual database credentials.
 const dbConfig = {
   host: '127.0.0.1',
-  user: 'YOUR_DB_USER',
-  password: 'YOUR_DB_PASSWORD',
-  database: 'YOUR_DB_NAME',
+  user: 'YOUR_DB_USER',      // <-- Replace
+  password: 'YOUR_DB_PASSWORD',// <-- Replace
+  database: 'YOUR_DB_NAME',  // <-- Replace
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
-};
-let pool;
-try {
-  pool = mysql.createPool(dbConfig);
-  console.log("Successfully connected to the database.");
-} catch (error) {
-  console.error("!!! FATAL DATABASE ERROR: Could not create connection pool.", error);
-  console.error("!!! Please ensure the database credentials in server.js are correct and the database is running.");
-  process.exit(1);
-}
-
-
-// --- API ENDPOINTS ---
-
-// Helper for consistent error handling
-const handleApiError = (res, error, context) => {
-  console.error(`API Error in ${context}:`, error);
-  res.status(500).json({ error: `Server error in ${context}`, details: error.message });
+  queueLimit: 0,
+  // Add support for JSON columns
+  supportBigNumbers: true,
+  bigNumberStrings: true
 };
 
-// GET Games
-app.get('/api/games', async (req, res) => {
-  try {
-    const [rows] = await pool.execute('SELECT * FROM games ORDER BY name ASC');
-    // MySQL stores JSON as strings, so we need to parse them.
-    const games = rows.map(game => ({
-        ...game,
-        default_filters: JSON.parse(game.default_filters || '{}'),
-        columns: JSON.parse(game.columns || '[]'),
-        filters: JSON.parse(game.filters || '[]'),
-        sorts: JSON.parse(game.sorts || '[]')
-    }));
-    res.json(games);
-  } catch (error) {
-    handleApiError(res, error, 'GET /api/games');
-  }
-});
+const pool = mysql.createPool(dbConfig);
 
-// UPSERT Game
-app.post('/api/games/upsert', async (req, res) => {
-    const { id, ...gameData } = req.body;
-    // Stringify JSON fields for MySQL
-    const gameToSave = {
-        ...gameData,
-        default_filters: JSON.stringify(gameData.default_filters || {}),
-        columns: JSON.stringify(gameData.columns || []),
-        filters: JSON.stringify(gameData.filters || []),
-        sorts: JSON.stringify(gameData.sorts || []),
-    };
+// --- Middleware ---
+app.use(express.json());
 
-    try {
-        if (id) {
-            // Update
-            const fields = Object.keys(gameToSave).map(key => `${key} = ?`).join(', ');
-            const values = [...Object.values(gameToSave), id];
-            await pool.execute(`UPDATE games SET ${fields} WHERE id = ?`, values);
-            res.json({ id, ...gameData });
-        } else {
-            // Insert
-            const [result] = await pool.execute(
-                `INSERT INTO games (${Object.keys(gameToSave).join(', ')}) VALUES (${'?'.repeat(Object.keys(gameToSave).length).split('').join(',')})`,
-                Object.values(gameToSave)
-            );
-            res.json({ id: result.insertId, ...gameData });
+// --- Helper Functions ---
+const parseJsonFields = (item) => {
+    const parsed = { ...item };
+    for (const key in parsed) {
+        if (typeof parsed[key] === 'string') {
+            try {
+                // Only parse if it looks like JSON (starts with { or [)
+                if (parsed[key].startsWith('{') || parsed[key].startsWith('[')) {
+                    parsed[key] = JSON.parse(parsed[key]);
+                }
+            } catch (e) {
+                // Not a JSON string, leave it as is
+            }
         }
-    } catch(error) {
-        handleApiError(res, error, 'POST /api/games/upsert');
     }
-});
+    return parsed;
+};
 
 
-// GET Listings (with filtering, sorting, pagination)
-app.post('/api/listings', async (req, res) => {
-    const { game, view, filters, sortId, page, rowsPerPage } = req.body;
-    
-    let query = 'FROM listings WHERE game_id = ?';
-    let params = [game.id];
+// --- API Routes ---
 
-    if (view === 'active') { query += ' AND is_hidden = 0 AND is_archived = 0'; }
-    if (view === 'hidden') { query += ' AND is_hidden = 1 AND is_archived = 0'; }
-    if (view === 'archived') { query += ' AND is_archived = 1'; }
-
-    Object.entries(filters).forEach(([key, value]) => {
-      if (!value) return;
-      const filterConfig = game.filters.find(f => f.id === key || `${f.id}_min` === key || `${f.id}_max` === key);
-      if (!filterConfig) return;
-
-      const dbColumn = game.columns.find(c => c.id === filterConfig.id);
-      const isCoreField = dbColumn?.type === 'core';
-      const fieldName = isCoreField ? filterConfig.id : `JSON_UNQUOTE(JSON_EXTRACT(game_specific_data, '$.${filterConfig.id}'))`;
-      
-      if (filterConfig.type === 'number_range') {
-          if (key.endsWith('_min')) { query += ` AND ${fieldName} >= ?`; params.push(value); }
-          if (key.endsWith('_max')) { query += ` AND ${fieldName} <= ?`; params.push(value); }
-      } else {
-          query += ` AND ${fieldName} LIKE ?`; params.push(`%${value}%`);
-      }
-    });
-
-    const sortOption = game.sorts.find(s => s.id === sortId) || game.sorts[0];
-    const orderBy = sortOption ? `ORDER BY ${sortOption.column} ${sortOption.ascending ? 'ASC' : 'DESC'}` : '';
-    
-    const from = (page - 1) * rowsPerPage;
-    const limit = `LIMIT ?, ?`;
-    
-    try {
-        const countQuery = `SELECT count(*) as total ${query}`;
-        const [countResult] = await pool.execute(countQuery, params);
-        const totalCount = countResult[0].total;
-
-        const dataQuery = `SELECT * ${query} ${orderBy} ${limit}`;
-        const [dataRows] = await pool.execute(dataQuery, [...params, from, rowsPerPage]);
-
-        const listings = dataRows.map(l => ({
-            ...l,
-            game_specific_data: JSON.parse(l.game_specific_data || '{}'),
-            raw_response: JSON.parse(l.raw_response || '{}')
-        }));
-
-        res.json({ data: listings, count: totalCount });
-
-    } catch(error) {
-        handleApiError(res, error, 'POST /api/listings');
-    }
-});
-
-// UPSERT Listings (Bulk)
-app.post('/api/listings/bulk-upsert', async (req, res) => {
-    const listings = req.body;
-    if (!listings || listings.length === 0) {
-        return res.status(200).json({ message: 'No listings to upsert.' });
-    }
-    
-    try {
-        const query = `
-            INSERT INTO listings (item_id, game_id, url, title, price, currency, game_specific_data, deal_score, is_hidden, is_archived, last_seen_at, raw_response, first_seen_at) 
-            VALUES ? 
-            ON DUPLICATE KEY UPDATE 
-            title=VALUES(title), price=VALUES(price), last_seen_at=VALUES(last_seen_at), raw_response=VALUES(raw_response), deal_score=VALUES(deal_score)
-        `;
-        const values = listings.map(l => [
-            l.item_id, l.game_id, l.url, l.title, l.price, l.currency,
-            JSON.stringify(l.game_specific_data || {}), l.deal_score, l.is_hidden, l.is_archived, l.last_seen_at,
-            JSON.stringify(l.raw_response || {}), l.first_seen_at || new Date()
-        ]);
-
-        await pool.query(query, [values]);
-        res.status(201).json({ message: 'Listings upserted successfully.'});
-    } catch(error) {
-        handleApiError(res, error, 'POST /api/listings/bulk-upsert');
-    }
-});
-
-// Other endpoints (logs, settings, etc.) would be added here following the same pattern.
-// For brevity, I'll add the essential ones for settings.
-
+// GET /api/settings/:key
 app.get('/api/settings/:key', async (req, res) => {
     try {
-        const { key } = req.params;
-        const [rows] = await pool.execute('SELECT value FROM settings WHERE `key` = ?', [key]);
+        const [rows] = await pool.execute('SELECT `value` FROM `settings` WHERE `key` = ?', [req.params.key]);
         if (rows.length > 0) {
-            res.json(rows[0]);
+            res.json({ value: rows[0].value });
         } else {
-            res.status(404).json({ value: null });
+            res.json({ value: null });
         }
-    } catch(error) {
-        handleApiError(res, error, 'GET /api/settings/:key');
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
     }
 });
 
+// POST /api/settings
 app.post('/api/settings', async (req, res) => {
+    const { key, value } = req.body;
     try {
-        const { key, value } = req.body;
-        const query = `
-            INSERT INTO settings (\`key\`, value, updated_at) VALUES (?, ?, NOW())
-            ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = NOW()
-        `;
-        await pool.execute(query, [key, value]);
-        res.status(200).json({ message: 'Setting saved.'});
-    } catch(error) {
-        handleApiError(res, error, 'POST /api/settings');
+        await pool.execute('INSERT INTO `settings` (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?', [key, value, value]);
+        res.status(200).json({ message: 'Setting updated' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// GET /api/games
+app.get('/api/games', async (req, res) => {
+    try {
+        const [rows] = await pool.execute('SELECT * FROM `games` ORDER BY `id`');
+        const games = rows.map(parseJsonFields);
+        res.json(games);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// POST /api/games (Upsert)
+app.post('/api/games', async (req, res) => {
+    const game = req.body;
+    try {
+        const columnsToUpdate = {};
+        Object.keys(game).forEach(key => {
+            if (key !== 'id' && game[key] !== undefined) {
+                const value = game[key];
+                columnsToUpdate[key] = (typeof value === 'object' && value !== null) ? JSON.stringify(value) : value;
+            }
+        });
+        
+        if (game.id) { // Update
+            const fields = Object.keys(columnsToUpdate).map(key => `\`${key}\` = ?`).join(', ');
+            const values = Object.values(columnsToUpdate);
+            await pool.execute(`UPDATE \`games\` SET ${fields} WHERE \`id\` = ?`, [...values, game.id]);
+        } else { // Insert
+            const fields = Object.keys(columnsToUpdate).map(key => `\`${key}\``).join(', ');
+            const placeholders = Object.keys(columnsToUpdate).map(() => '?').join(', ');
+            const values = Object.values(columnsToUpdate);
+            await pool.execute(`INSERT INTO \`games\` (${fields}) VALUES (${placeholders})`, values);
+        }
+        res.status(200).json({ message: 'Game saved' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// GET /api/games/:gameId/listings
+app.get('/api/games/:gameId/listings', async (req, res) => {
+    const { gameId } = req.params;
+    const { view, sort, page = 1, limit = 25, filters } = req.query;
+
+    try {
+        let whereClauses = ['`game_id` = ?'];
+        let params = [gameId];
+
+        if (view === 'active') whereClauses.push('`is_hidden` = FALSE AND `is_archived` = FALSE');
+        else if (view === 'hidden') whereClauses.push('`is_hidden` = TRUE AND `is_archived` = FALSE');
+        else if (view === 'archived') whereClauses.push('`is_archived` = TRUE');
+
+        if (filters && typeof filters === 'string') {
+            const parsedFilters = JSON.parse(filters);
+            if (parsedFilters.title) {
+                whereClauses.push('`title` LIKE ?');
+                params.push(`%${parsedFilters.title}%`);
+            }
+        }
+        
+        const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
+        const [[{ count }]] = await pool.execute(`SELECT COUNT(*) as count FROM \`listings\` ${whereSql}`, params);
+        
+        const offset = (Number(page) - 1) * Number(limit);
+        const [sortConfig] = await pool.execute('SELECT `sorts` from `games` WHERE `id` = ?', [gameId]);
+        const sorts = sortConfig.length > 0 ? JSON.parse(sortConfig[0].sorts) : [];
+        const currentSort = sorts.find(s => s.id === sort) || { column: 'last_seen_at', ascending: false };
+        const orderBy = `ORDER BY \`${currentSort.column}\` ${currentSort.ascending ? 'ASC' : 'DESC'}`;
+        
+        const [rows] = await pool.execute(`SELECT * FROM \`listings\` ${whereSql} ${orderBy} LIMIT ? OFFSET ?`, [...params, Number(limit), offset]);
+        
+        res.json({ data: rows.map(parseJsonFields), count });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// GET /api/games/:gameId/listings/ids
+app.get('/api/games/:gameId/listings/ids', async (req, res) => {
+    const { gameId } = req.params;
+    const { view, filters } = req.query;
+    try {
+        let whereClauses = ['`game_id` = ?'];
+        let params = [gameId];
+        if (view === 'active') whereClauses.push('`is_hidden` = FALSE AND `is_archived` = FALSE');
+        else if (view === 'hidden') whereClauses.push('`is_hidden` = TRUE AND `is_archived` = FALSE');
+        else if (view === 'archived') whereClauses.push('`is_archived` = TRUE');
+        if (filters && typeof filters === 'string') { /* basic filtering */ }
+
+        const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
+        const [rows] = await pool.execute(`SELECT item_id FROM \`listings\` ${whereSql}`, params);
+        res.json(rows.map(r => r.item_id));
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// GET /api/games/:gameId/listings/export
+app.get('/api/games/:gameId/listings/export', async (req, res) => {
+    // Similar to listings getter but without pagination
+    const { gameId } = req.params;
+    const { view, sort, filters } = req.query;
+     try {
+        let whereClauses = ['`game_id` = ?'];
+        let params = [gameId];
+        if (view === 'active') whereClauses.push('`is_hidden` = FALSE AND `is_archived` = FALSE');
+        else if (view === 'hidden') whereClauses.push('`is_hidden` = TRUE AND `is_archived` = FALSE');
+        else if (view === 'archived') whereClauses.push('`is_archived` = TRUE');
+        const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
+        const [rows] = await pool.execute(`SELECT * FROM \`listings\` ${whereSql}`, params);
+        res.json(rows.map(parseJsonFields));
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
     }
 });
 
 
+// POST /api/games/:gameId/listings/by-ids
+app.post('/api/games/:gameId/listings/by-ids', async (req, res) => {
+    const { gameId } = req.params;
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'IDs must be a non-empty array.' });
+    }
+    try {
+        const placeholders = ids.map(() => '?').join(',');
+        const [rows] = await pool.execute(`SELECT * FROM listings WHERE game_id = ? AND item_id IN (${placeholders})`, [gameId, ...ids]);
+        res.json(rows.map(parseJsonFields));
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// PATCH /api/games/:gameId/listings/bulk-update
+app.patch('/api/games/:gameId/listings/bulk-update', async (req, res) => {
+    const { gameId } = req.params;
+    const { itemIds, updates } = req.body;
+    if (!itemIds || itemIds.length === 0) return res.status(400).json({ message: 'No item IDs provided.' });
+    try {
+        const fields = Object.keys(updates).map(key => `\`${key}\` = ?`).join(', ');
+        const values = Object.values(updates);
+        const placeholders = itemIds.map(() => '?').join(',');
+        const [result] = await pool.execute(`UPDATE \`listings\` SET ${fields} WHERE \`game_id\` = ? AND \`item_id\` IN (${placeholders})`, [...values, gameId, ...itemIds]);
+        res.json({ updated: result.affectedRows });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// POST /api/listings/bulk-upsert
+app.post('/api/listings/bulk-upsert', async (req, res) => {
+    const listings = req.body;
+    if (!listings || listings.length === 0) return res.status(400).json({ message: 'No listings provided.' });
+    
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+        let upsertedCount = 0;
+        for (const listing of listings) {
+            const keys = Object.keys(listing).filter(k => listing[k] !== undefined);
+            const values = keys.map(k => (typeof listing[k] === 'object' && listing[k] !== null) ? JSON.stringify(listing[k]) : listing[k]);
+            const fields = keys.map(k => `\`${k}\``).join(',');
+            const placeholders = keys.map(() => '?').join(',');
+            const onUpdate = keys.map(k => `\`${k}\` = VALUES(\`${k}\`)`).join(',');
+            const [result] = await connection.execute(`INSERT INTO \`listings\` (${fields}) VALUES (${placeholders}) ON DUPLICATE KEY UPDATE ${onUpdate}`, values);
+            upsertedCount += result.affectedRows;
+        }
+        await connection.commit();
+        res.json({ upserted: upsertedCount });
+    } catch (error) {
+        await connection.rollback();
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    } finally {
+        connection.release();
+    }
+});
+
+// GET /api/games/:gameId/dashboard/counts
+app.get('/api/games/:gameId/dashboard/counts', async (req, res) => {
+    const { gameId } = req.params;
+    try {
+        const [[{ count: active }]] = await pool.execute('SELECT COUNT(*) as count FROM `listings` WHERE `game_id` = ? AND `is_hidden` = FALSE AND `is_archived` = FALSE', [gameId]);
+        const [[{ count: hidden }]] = await pool.execute('SELECT COUNT(*) as count FROM `listings` WHERE `game_id` = ? AND `is_hidden` = TRUE AND `is_archived` = FALSE', [gameId]);
+        const [[{ count: archived }]] = await pool.execute('SELECT COUNT(*) as count FROM `listings` WHERE `game_id` = ? AND `is_archived` = TRUE', [gameId]);
+        res.json({ active, hidden, archived });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// GET /api/games/:gameId/dashboard/logs
+app.get('/api/games/:gameId/dashboard/logs', async (req, res) => {
+    const { gameId } = req.params;
+    try {
+        const [fetchLogs] = await pool.execute('SELECT * FROM `fetch_logs` WHERE `game_id` = ? ORDER BY `created_at` DESC LIMIT 10', [gameId]);
+        const [checkLogs] = await pool.execute('SELECT * FROM `check_logs` WHERE `game_id` = ? ORDER BY `created_at` DESC LIMIT 10', [gameId]);
+        res.json({ fetchLogs, checkLogs });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// POST /api/logs/fetch
+app.post('/api/logs/fetch', async (req, res) => {
+    const log = req.body;
+    try {
+        const id = uuidv4();
+        await pool.execute('INSERT INTO `fetch_logs` (id, game_id, page, items_fetched, status, error_message, duration_ms) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [id, log.game_id, log.page, log.items_fetched, log.status, log.error_message, log.duration_ms]);
+        res.status(201).json({ ...log, id });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// POST /api/logs/check
+app.post('/api/logs/check', async (req, res) => {
+    const log = req.body;
+    try {
+        const id = uuidv4();
+        await pool.execute('INSERT INTO `check_logs` (id, game_id, items_checked, items_archived, status, error_message, duration_ms) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [id, log.game_id, log.items_checked, log.items_archived, log.status, log.error_message, log.duration_ms]);
+        res.status(201).json({ ...log, id });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// PATCH /api/logs/check/:logId
+app.patch('/api/logs/check/:logId', async (req, res) => {
+    const { logId } = req.params;
+    const updates = req.body;
+    try {
+        const fields = Object.keys(updates).map(key => `\`${key}\` = ?`).join(', ');
+        const values = Object.values(updates);
+        await pool.execute(`UPDATE \`check_logs\` SET ${fields} WHERE \`id\` = ?`, [...values, logId]);
+        res.json({ message: 'Log updated' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// GET /api/games/:gameId/listings/for-check
+app.get('/api/games/:gameId/listings/for-check', async (req, res) => {
+    const { gameId } = req.params;
+    const { cursor = 0, limit = 50 } = req.query;
+    try {
+        const [rows] = await pool.execute(
+            'SELECT `item_id` FROM `listings` WHERE `game_id` = ? AND `is_archived` = FALSE AND `item_id` > ? ORDER BY `item_id` ASC LIMIT ?',
+            [gameId, Number(cursor), Number(limit)]
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// --- Server Start ---
 app.listen(port, () => {
-  console.log(`U.G.L.P. backend server listening on port ${port}`);
+    console.log(`Server listening at http://localhost:${port}`);
 });
