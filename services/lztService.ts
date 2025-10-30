@@ -55,9 +55,9 @@ export const testApiToken = async (token: string): Promise<{ success: boolean; e
     }
     try {
         // Use the /me endpoint for a reliable token validation check.
-        const url = `https://prod-api.lzt.market/me`;
+        const url = `https://api.lzt.market/me`;
         // Use the proxy to avoid CORS issues in the browser
-        const result = await proxyLztRequest(url, token);
+        const result = await proxyLztRequest(url, token, 'GET');
         // The LZT API can return a 200 OK but with an error message in the body
         if (result && result.errors) {
             return { success: false, error: result.errors.join(', ') };
@@ -120,7 +120,7 @@ export const fetchListings = async (
 
   try {
     const url = `${game.api_base_url}${game.list_path}?${params.toString()}`;
-    const data = await proxyLztRequest(url, token);
+    const data = await proxyLztRequest(url, token, 'GET');
 
     return {
         items: data.items || [],
@@ -140,7 +140,7 @@ export const checkItemStatus = async (apiBaseUrl: string, checkPathTemplate: str
     const url = `${apiBaseUrl}${checkPath}`;
 
     try {
-        const data = await proxyLztRequest(url, token);
+        const data = await proxyLztRequest(url, token, 'POST');
         
         // These checks might need to be generalized in the game config in the future
         if (data.item?.item_state === 'paid') return { isActive: false, reason: 'Item has been sold.' };

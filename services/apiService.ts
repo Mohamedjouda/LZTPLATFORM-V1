@@ -31,13 +31,13 @@ export const getAppVersion = (): Promise<string> => {
 };
 
 // LZT API Proxy
-export const proxyLztRequest = (url: string, token: string): Promise<any> => {
+export const proxyLztRequest = (url: string, token: string, method: 'GET' | 'POST' = 'GET'): Promise<any> => {
     // Base64 encode the URL to potentially bypass simple WAF rules.
     const encodedUrl = btoa(url);
     // Send the encoded URL as a query parameter to avoid WAFs that inspect the POST body.
     return apiFetch(`/proxy/lzt?url=${encodeURIComponent(encodedUrl)}`, {
         method: 'POST',
-        body: JSON.stringify({ token }), // Only send the token in the body
+        body: JSON.stringify({ token, method }),
     });
 };
 

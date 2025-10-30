@@ -118,6 +118,8 @@ server {
 
     # --- Reverse Proxy for the BACKEND API ---
     # This sends all API calls to your Node.js server.
+    # CRITICAL: A 404 error on the website usually means this part is wrong.
+    # Make sure the proxy_pass line does NOT have a trailing slash.
     location /api/ {
         proxy_pass http://127.0.0.1:3001; # <-- IMPORTANT: No trailing slash.
         proxy_set_header Host $host;
