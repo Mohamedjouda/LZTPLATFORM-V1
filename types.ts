@@ -96,12 +96,11 @@ export interface Notification {
     read: boolean;
 }
 
-// Global declaration for process.env, which is injected by Vite during build.
-// This allows using process.env.API_KEY in the client-side code.
-// FIX: The previous `declare var process` was incomplete and conflicted with the Node.js `process` type.
-// This is replaced with a global augmentation of `NodeJS.ProcessEnv` which is safer and correctly
-// adds the API_KEY type without breaking other `process` properties like `cwd()`.
+// Global declaration for variables injected by Vite at build time.
 declare global {
+  // This constant is defined in vite.config.ts
+  const __APP_VERSION__: string;
+
   namespace NodeJS {
     interface ProcessEnv {
       API_KEY?: string;

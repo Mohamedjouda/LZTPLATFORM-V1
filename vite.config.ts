@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 // FIX: Explicitly import `cwd` from 'process' to resolve a TypeScript type
 // conflict with the global `process` object.
 import { cwd } from 'process';
+import pkg from './package.json';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -14,6 +15,10 @@ export default defineConfig(({ mode }) => {
     define: {
       // Expose environment variables to the client-side code
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
+      // Define a global constant for the app version. This is a robust way
+      // to inject the version from package.json into the app, avoiding
+      // issues with `import.meta.env`.
+      '__APP_VERSION__': JSON.stringify(pkg.version),
     },
     build: {
       // By default, Vite empties the outDir on build.
