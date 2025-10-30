@@ -20,20 +20,8 @@ const AppContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>('light');
-  const [appVersion, setAppVersion] = useState<string>('...');
+  const [appVersion, setAppVersion] = useState<string>(import.meta.env.VITE_APP_VERSION || '?.?.?');
   const { addNotification } = useNotifications();
-
-  useEffect(() => {
-    const fetchVersion = async () => {
-      try {
-        const version = await getAppVersion();
-        setAppVersion(version);
-      } catch (e) {
-        setAppVersion('?.?.?');
-      }
-    };
-    fetchVersion();
-  }, []);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme') as Theme | null;

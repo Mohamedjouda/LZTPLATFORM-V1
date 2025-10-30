@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getGames, upsertGame } from '../services/apiService';
+import { getGames, upsertGame, deleteGame } from '../services/apiService';
 import { gamePresets } from '../game-presets';
 import { Game } from '../types';
-import { PlusIcon, EditIcon, Loader2, AlertTriangle, ChevronDown, XIcon, CogIcon } from './Icons';
+import { PlusIcon, EditIcon, Loader2, AlertTriangle, ChevronDown, XIcon, CogIcon, Trash2Icon } from './Icons';
 import { useNotifications } from './NotificationSystem';
 
 const emptyGame: Omit<Game, 'id' | 'created_at'> = {
@@ -186,6 +186,25 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
         }
     };
 
+    const handleDelete = async (gameToDelete: Game) => {
+        if (!gameToDelete.id) return;
+
+        if (window.confirm(`Are you sure you want to delete '${gameToDelete.name}'? This will remove the game configuration and all of its associated listings.`)) {
+            setIsUpdating(gameToDelete.id);
+            try {
+                await deleteGame(gameToDelete.id);
+                addNotification({ type: 'success', message: `Game '${gameToDelete.name}' was deleted successfully.`, code: 'GM-201' });
+                onGamesUpdated();
+                await loadGames();
+            } catch (err: any) {
+                const message = `Failed to delete game: ${err.message}`;
+                addNotification({ type: 'error', message, code: 'GM-503' });
+            } finally {
+                setIsUpdating(null);
+            }
+        }
+    };
+
     const existingSlugs = new Set(games.map(g => g.slug));
     const availablePresets = Object.keys(gamePresets)
         .filter(key => !existingSlugs.has((gamePresets as Record<string, any>)[key].slug));
@@ -263,9 +282,14 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
                                         <ToggleSwitch enabled={game.check_worker_enabled} onChange={() => handleToggle(game, 'check')} disabled={isUpdating === game.id} />
                                     </div>
                                 </div>
-                                <button onClick={() => handleEdit(game)} className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400">
-                                    <EditIcon className="w-5 h-5"/>
-                                </button>
+                                <div className="flex items-center space-x-1">
+                                    <button onClick={() => handleEdit(game)} disabled={isUpdating === game.id} className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 disabled:opacity-50">
+                                        <EditIcon className="w-5 h-5"/>
+                                    </button>
+                                    <button onClick={() => handleDelete(game)} disabled={isUpdating === game.id} className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 text-red-500 disabled:opacity-50">
+                                        {isUpdating === game.id ? <Loader2 className="w-5 h-5 animate-spin text-red-500" /> : <Trash2Icon className="w-5 h-5"/>}
+                                    </button>
+                                </div>
                             </div>
                         </li>
                     ))}

@@ -69,6 +69,12 @@ export const upsertGame = (game: Partial<Game>): Promise<Game> => {
     });
 };
 
+export const deleteGame = (gameId: number): Promise<void> => {
+    return apiFetch(`/games/${gameId}`, {
+        method: 'DELETE',
+    });
+};
+
 // Listings
 export const getListings = async (
     game: Game,

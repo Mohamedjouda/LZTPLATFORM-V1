@@ -3,16 +3,26 @@ import react from '@vitejs/plugin-react';
 // FIX: Explicitly import `cwd` from 'process' to resolve a TypeScript type
 // conflict with the global `process` object.
 import { cwd } from 'process';
+import { readFileSync } from 'fs';
+
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // Load env file based on mode (development, production)
   const env = loadEnv(mode, cwd(), '');
 
+  // Manually set the version from package.json as an environment variable.
+  // Vite will automatically pick up any env variables prefixed with VITE_
+  // and expose them on `import.meta.env`. This is the standard, reliable way to handle
+  // build-time environment variables and fixes the previous TypeError.
+  process.env.VITE_APP_VERSION = packageJson.version;
+
   return {
     plugins: [react()],
     define: {
-      // Expose environment variables to the client-side code
+      // Expose environment variables to the client-side code that are NOT prefixed with VITE_.
+      // This is necessary for variables like API_KEY which are expected on `process.env`.
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
     },
     build: {

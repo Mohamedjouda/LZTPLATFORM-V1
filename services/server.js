@@ -218,7 +218,26 @@ apiRouter.post('/games', async (req, res) => {
         }
         res.status(201).json({ message: 'Game saved' });
     } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY' && err.message.includes("'slug'")) {
+            return res.status(409).json({ message: `A game with the slug '${gameData.slug}' already exists. Please choose a unique slug.` });
+        }
         res.status(500).json({ message: err.message });
+    }
+});
+
+apiRouter.delete('/games/:gameId', async (req, res) => {
+    const { gameId } = req.params;
+    try {
+        // The 'listings' table has ON DELETE CASCADE, so related listings will be deleted automatically.
+        // The log tables have ON DELETE SET NULL, so their game_id will be nulled.
+        const [result] = await pool.query('DELETE FROM games WHERE id = ?', [gameId]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Game not found.' });
+        }
+        res.status(200).json({ message: 'Game deleted successfully.' });
+    } catch (err) {
+        console.error("Error deleting game:", err);
+        res.status(500).json({ message: `Failed to delete game: ${err.message}` });
     }
 });
 

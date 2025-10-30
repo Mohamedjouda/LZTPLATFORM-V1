@@ -6,28 +6,22 @@ import { RefreshCwIcon } from './Icons';
 const VersionChecker: React.FC = () => {
   const [isOutdated, setIsOutdated] = useState(false);
   const { addNotification } = useNotifications();
+  const clientVersion = import.meta.env.VITE_APP_VERSION;
 
   useEffect(() => {
     const checkVersion = async () => {
       try {
         const serverVersion = await getAppVersion();
-        const clientVersion = localStorage.getItem('appVersion');
 
         if (clientVersion && serverVersion && serverVersion !== '?.?.?' && clientVersion !== serverVersion) {
-          // The stored version is different from the latest server version,
-          // which means the user has an old JS bundle cached.
+          // The currently running code's version is different from the latest
+          // version on the server, so an update is available.
           setIsOutdated(true);
           addNotification({
             type: 'error',
             message: `Update available! You are on v${clientVersion}, latest is v${serverVersion}. Please refresh.`,
             code: 'UPDATE-REQ'
           });
-        }
-        
-        // Always store the latest version from the server.
-        // On the next load with the old JS, the mismatch will be detected.
-        if (serverVersion && serverVersion !== '?.?.?') {
-            localStorage.setItem('appVersion', serverVersion);
         }
       } catch (error) {
         console.error("Version check failed:", error);
@@ -37,7 +31,7 @@ const VersionChecker: React.FC = () => {
     // Check for a new version after a few seconds to not block initial render.
     const timeoutId = setTimeout(checkVersion, 4000);
     return () => clearTimeout(timeoutId);
-  }, [addNotification]);
+  }, [addNotification, clientVersion]);
 
   if (!isOutdated) {
     return null;
