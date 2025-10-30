@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getListings, updateListings, exportToFile, getListingsByIds, getAllListingIds, getAllListingsForExport } from '../services/apiService';
 import { Listing, FilterState, Game, GameFilter } from '../types';
 import { formatRelativeTime } from '../utils';
-import { SearchIcon, ChevronDown, ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon, DownloadCloudIcon, Loader2, EyeOffIcon, ArchiveIcon, ArchiveRestoreIcon } from './Icons';
+import { SearchIcon, ChevronDown, ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon, DownloadCloudIcon, Loader2, EyeOffIcon, ArchiveIcon, ArchiveRestoreIcon, EyeIcon } from './Icons';
 import { useNotifications } from './NotificationSystem';
 
 const getDealScoreColor = (score: number | null) => {
@@ -252,7 +253,7 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ view, game }) => {
                     {selectedIds.size > 0 && <button onClick={handleClearSelection} className="text-sm bg-white dark:bg-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-sm">Clear ({selectedIds.size})</button>}
                     
                     {view === 'active' && <button onClick={() => handleBulkAction('hide')} className="text-sm bg-yellow-500 text-white px-3 py-1.5 rounded-md hover:bg-yellow-600 disabled:opacity-50 flex items-center" disabled={selectedIds.size === 0 || isProcessing}><EyeOffIcon className="w-4 h-4 inline-block mr-1" />Hide ({selectedIds.size})</button>}
-                    {view === 'hidden' && <button onClick={() => handleBulkAction('unhide')} className="text-sm bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 disabled:opacity-50 flex items-center" disabled={selectedIds.size === 0 || isProcessing}>Unhide ({selectedIds.size})</button>}
+                    {view === 'hidden' && <button onClick={() => handleBulkAction('unhide')} className="text-sm bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 disabled:opacity-50 flex items-center" disabled={selectedIds.size === 0 || isProcessing}><EyeIcon className="w-4 h-4 inline-block mr-1" />Unhide ({selectedIds.size})</button>}
                     
                     {(view === 'active' || view === 'hidden') && <button onClick={() => handleBulkAction('archive')} className="text-sm bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 disabled:opacity-50 flex items-center" disabled={selectedIds.size === 0 || isProcessing}><ArchiveIcon className="w-4 h-4 inline-block mr-1" />Archive ({selectedIds.size})</button>}
                     {view === 'archived' && <button onClick={() => handleBulkAction('unarchive')} className="text-sm bg-indigo-500 text-white px-3 py-1.5 rounded-md hover:bg-indigo-600 disabled:opacity-50 flex items-center" disabled={selectedIds.size === 0 || isProcessing}><ArchiveRestoreIcon className="w-4 h-4 inline-block mr-1" />Unarchive ({selectedIds.size})</button>}
