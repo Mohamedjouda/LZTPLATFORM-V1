@@ -45,7 +45,9 @@ const nginxConfig = `server {
     # This sends all API calls to your Node.js server.
     # The port (3001) MUST match the port you configured in the Node Project settings.
     location /api/ {
-        proxy_pass http://127.0.0.1:3001;
+        # The trailing slash on the proxy_pass URL is important.
+        # It tells Nginx to strip the /api prefix before sending the request to the backend.
+        proxy_pass http://127.0.0.1:3001/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -66,83 +68,6 @@ const nginxConfig = `server {
     }
 }`;
 
-const sqlSchema = `--
--- This script is for setting up the database on a standard MySQL/MariaDB server (like on aapanel).
--- It is idempotent and can be run multiple times safely.
---
-
-CREATE TABLE IF NOT EXISTS \`settings\` (
-  \`key\` varchar(255) NOT NULL,
-  \`value\` text NOT NULL,
-  PRIMARY KEY (\`key\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE IF NOT EXISTS \`games\` (
-  \`id\` int NOT NULL AUTO_INCREMENT,
-  \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  \`name\` varchar(255) NOT NULL,
-  \`slug\` varchar(255) NOT NULL,
-  \`category\` varchar(255) DEFAULT NULL,
-  \`description\` text,
-  \`api_base_url\` varchar(255) NOT NULL,
-  \`list_path\` varchar(255) NOT NULL,
-  \`check_path_template\` varchar(255) NOT NULL,
-  \`default_filters\` json DEFAULT NULL,
-  \`columns\` json DEFAULT NULL,
-  \`filters\` json DEFAULT NULL,
-  \`sorts\` json DEFAULT NULL,
-  \`fetch_worker_enabled\` tinyint(1) DEFAULT '1',
-  \`check_worker_enabled\` tinyint(1) DEFAULT '1',
-  \`fetch_interval_minutes\` int DEFAULT '60',
-  \`fetch_page_limit\` int DEFAULT '10',
-  PRIMARY KEY (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE IF NOT EXISTS \`listings\` (
-  \`item_id\` int NOT NULL,
-  \`game_id\` int NOT NULL,
-  \`url\` varchar(255) DEFAULT NULL,
-  \`title\` varchar(255) DEFAULT NULL,
-  \`price\` decimal(10,2) DEFAULT NULL,
-  \`currency\` varchar(10) DEFAULT NULL,
-  \`game_specific_data\` json DEFAULT NULL,
-  \`deal_score\` int DEFAULT NULL,
-  \`is_hidden\` tinyint(1) DEFAULT '0',
-  \`is_archived\` tinyint(1) DEFAULT '0',
-  \`archived_reason\` varchar(255) DEFAULT NULL,
-  \`first_seen_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  \`last_seen_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  \`archived_at\` timestamp NULL DEFAULT NULL,
-  \`raw_response\` json DEFAULT NULL,
-  PRIMARY KEY (\`game_id\`,\`item_id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE IF NOT EXISTS \`fetch_logs\` (
-  \`id\` varchar(36) NOT NULL,
-  \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  \`game_id\` int NOT NULL,
-  \`page\` int DEFAULT NULL,
-  \`items_fetched\` int DEFAULT NULL,
-  \`status\` enum('success','error','in_progress') DEFAULT NULL,
-  \`error_message\` text,
-  \`duration_ms\` int DEFAULT NULL,
-  PRIMARY KEY (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE IF NOT EXISTS \`check_logs\` (
-  \`id\` varchar(36) NOT NULL,
-  \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  \`game_id\` int NOT NULL,
-  \`items_checked\` int DEFAULT NULL,
-  \`items_archived\` int DEFAULT NULL,
-  \`status\` enum('success','error','in_progress') DEFAULT NULL,
-  \`error_message\` text,
-  \`duration_ms\` int DEFAULT NULL,
-  PRIMARY KEY (\`id\`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-`;
-
-
     return (
         <div className="max-w-4xl mx-auto space-y-12 text-gray-700 dark:text-gray-300">
             <div>
@@ -155,27 +80,15 @@ CREATE TABLE IF NOT EXISTS \`check_logs\` (
             <section>
                 <h2 className="text-2xl font-semibold flex items-center mb-4 text-gray-900 dark:text-white">
                     <DatabaseIcon className="w-6 h-6 mr-3 text-primary-500" />
-                    Step 1: Set Up MySQL Database
+                    Step 1: Create Database & Configure Backend
                 </h2>
-                <ol className="list-decimal list-inside space-y-2">
-                    <li>In aapanel, go to the <strong>Database</strong> section.</li>
-                    <li>Click <strong>Add database</strong>.</li>
-                    <li>Enter a database name (e.g., `uglp_db`), a username, and a strong password. <strong>Save these credentials</strong>.</li>
-                    <li>Once created, click <strong>Import</strong>. Choose "From text" and paste the entire SQL script below.</li>
-                    <li>Click <strong>Submit</strong> to create the tables.</li>
-                </ol>
-                <CodeBlock lang="sql">{sqlSchema}</CodeBlock>
-            </section>
-            
-            <section>
-                <h2 className="text-2xl font-semibold flex items-center mb-4 text-gray-900 dark:text-white">
-                    <CogIcon className="w-6 h-6 mr-3 text-primary-500" />
-                    Step 2: Configure & Deploy Backend
-                </h2>
-                 <ol className="list-decimal list-inside space-y-2">
+                <ol className="list-decimal list-inside space-y-4">
+                    <li>In aapanel, go to the <strong>Database</strong> section and click <strong>Add database</strong>.</li>
+                    <li>Create a new database, giving it a name, username, and password. <strong>Save these credentials.</strong></li>
+                    <li className="font-semibold">The application will create the necessary tables automatically; you do not need to import any SQL script.</li>
                     <li>In aapanel File Manager, navigate to your project root (e.g., `/www/wwwroot/your_domain.com`).</li>
                     <li>Open the <strong>`services/server.js`</strong> file.</li>
-                    <li>Edit the `dbConfig` section with the database credentials you saved in Step 1.</li>
+                    <li>Edit the `dbConfig` section with the database credentials you just saved.</li>
                     <li>Go to <strong>{'Website > Node project > Add Node project'}</strong>.</li>
                     <li>Fill out the form:
                         <ul className="list-disc list-inside ml-6 mt-2 space-y-1 bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
@@ -192,7 +105,7 @@ CREATE TABLE IF NOT EXISTS \`check_logs\` (
              <section>
                 <h2 className="text-2xl font-semibold flex items-center mb-4 text-gray-900 dark:text-white">
                     <BookOpenIcon className="w-6 h-6 mr-3 text-primary-500" />
-                    Step 3: Build Frontend & Configure Nginx
+                    Step 2: Build Frontend & Configure Nginx
                 </h2>
                 <ol className="list-decimal list-inside space-y-2">
                     <li>Connect to your server via SSH, navigate to your project root, and run the build command:
@@ -219,7 +132,7 @@ CREATE TABLE IF NOT EXISTS \`check_logs\` (
 
              <section>
                 <h2 className="text-2xl font-semibold flex items-center mb-4 text-gray-900 dark:text-white">
-                    Step 4: Final Configuration
+                    Step 3: Final Configuration
                 </h2>
                 <p>
                     With the server running, open your website. First, navigate to the <strong>Manage Games</strong> page and add one or more game configurations using the "Add from Preset" button. After that, go to the <strong>Settings</strong> page and enter your <strong>LZT Market API Token</strong>. The application is now ready to fetch data. The optional Gemini API key can be set in the `env.js` file to enable deal scores.

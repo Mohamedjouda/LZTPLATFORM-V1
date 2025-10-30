@@ -12,9 +12,9 @@ const port = 3001;
 // IMPORTANT: Replace these with your actual database credentials.
 const dbConfig = {
   host: '127.0.0.1',
-  user: 'YOUR_DB_USER',      // <-- Replace
-  password: 'YOUR_DB_PASSWORD',// <-- Replace
-  database: 'YOUR_DB_NAME',  // <-- Replace
+  user: 'uglp_db',
+  password: '48DGKPs6ZrsSJkta',
+  database: 'uglp_db',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -24,6 +24,94 @@ const dbConfig = {
 };
 
 const pool = mysql.createPool(dbConfig);
+
+// --- Database Initialization ---
+const sqlSchema = `
+CREATE TABLE IF NOT EXISTS \`settings\` (
+  \`key\` varchar(255) NOT NULL,
+  \`value\` text NOT NULL,
+  PRIMARY KEY (\`key\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS \`games\` (
+  \`id\` int NOT NULL AUTO_INCREMENT,
+  \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  \`name\` varchar(255) NOT NULL,
+  \`slug\` varchar(255) NOT NULL,
+  \`category\` varchar(255) DEFAULT NULL,
+  \`description\` text,
+  \`api_base_url\` varchar(255) NOT NULL,
+  \`list_path\` varchar(255) NOT NULL,
+  \`check_path_template\` varchar(255) NOT NULL,
+  \`default_filters\` json DEFAULT NULL,
+  \`columns\` json DEFAULT NULL,
+  \`filters\` json DEFAULT NULL,
+  \`sorts\` json DEFAULT NULL,
+  \`fetch_worker_enabled\` tinyint(1) DEFAULT '1',
+  \`check_worker_enabled\` tinyint(1) DEFAULT '1',
+  \`fetch_interval_minutes\` int DEFAULT '60',
+  \`fetch_page_limit\` int DEFAULT '10',
+  PRIMARY KEY (\`id\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS \`listings\` (
+  \`item_id\` int NOT NULL,
+  \`game_id\` int NOT NULL,
+  \`url\` varchar(255) DEFAULT NULL,
+  \`title\` varchar(255) DEFAULT NULL,
+  \`price\` decimal(10,2) DEFAULT NULL,
+  \`currency\` varchar(10) DEFAULT NULL,
+  \`game_specific_data\` json DEFAULT NULL,
+  \`deal_score\` int DEFAULT NULL,
+  \`is_hidden\` tinyint(1) DEFAULT '0',
+  \`is_archived\` tinyint(1) DEFAULT '0',
+  \`archived_reason\` varchar(255) DEFAULT NULL,
+  \`first_seen_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  \`last_seen_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  \`archived_at\` timestamp NULL DEFAULT NULL,
+  \`raw_response\` json DEFAULT NULL,
+  PRIMARY KEY (\`game_id\`,\`item_id\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS \`fetch_logs\` (
+  \`id\` varchar(36) NOT NULL,
+  \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  \`game_id\` int NOT NULL,
+  \`page\` int DEFAULT NULL,
+  \`items_fetched\` int DEFAULT NULL,
+  \`status\` enum('success','error','in_progress') DEFAULT NULL,
+  \`error_message\` text,
+  \`duration_ms\` int DEFAULT NULL,
+  PRIMARY KEY (\`id\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS \`check_logs\` (
+  \`id\` varchar(36) NOT NULL,
+  \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  \`game_id\` int NOT NULL,
+  \`items_checked\` int DEFAULT NULL,
+  \`items_archived\` int DEFAULT NULL,
+  \`status\` enum('success','error','in_progress') DEFAULT NULL,
+  \`error_message\` text,
+  \`duration_ms\` int DEFAULT NULL,
+  PRIMARY KEY (\`id\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+`;
+
+const initializeDatabase = async () => {
+  try {
+    const statements = sqlSchema.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    for (const statement of statements) {
+      await pool.execute(statement);
+    }
+    console.log('Database schema verified and initialized successfully.');
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    // Exit if the database can't be set up, as the app won't work.
+    process.exit(1);
+  }
+};
+
 
 // --- Middleware ---
 app.use(cors());
@@ -360,12 +448,15 @@ apiRouter.get('/games/:gameId/listings/for-check', async (req, res) => {
 
 
 // --- Server Start ---
-// Mount the router to handle both /api prefixed and non-prefixed routes.
-// This makes the backend compatible with Nginx configs that either strip the /api prefix or not.
-app.use('/api', apiRouter);
-app.use('/', apiRouter);
+const startServer = async () => {
+  await initializeDatabase();
 
+  // The Nginx reverse proxy strips the /api prefix, so we mount the router at the root.
+  app.use('/', apiRouter);
 
-app.listen(port, () => {
-    console.log(`Server listening at http://localhost:${port}`);
-});
+  app.listen(port, () => {
+      console.log(`Server listening at http://localhost:${port}`);
+  });
+};
+
+startServer();
