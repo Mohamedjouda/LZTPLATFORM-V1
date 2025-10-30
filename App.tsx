@@ -7,6 +7,7 @@ import SetupGuidePage from './components/SetupGuidePage';
 import SettingsPage from './components/SettingsPage';
 import { Loader2, SunIcon, MoonIcon, GameIcon, BookOpenIcon, AlertTriangle, SettingsIcon } from './components/Icons';
 import { NotificationProvider, useNotifications, NotificationBell } from './components/NotificationSystem';
+import VersionChecker from './components/VersionChecker';
 
 type Page = 'marketplace' | 'manage-games' | 'setup-guide' | 'settings';
 type Theme = 'light' | 'dark';
@@ -161,6 +162,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-950 text-gray-800 dark:text-gray-200">
+      <VersionChecker />
       <aside className={`flex flex-col bg-gray-800 text-white transition-all duration-300 shadow-2xl z-20 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-700/50">
            {isSidebarOpen && (
