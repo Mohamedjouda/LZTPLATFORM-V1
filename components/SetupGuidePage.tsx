@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS \`check_logs\` (
                     <li>In aapanel File Manager, navigate to your project root (e.g., `/www/wwwroot/your_domain.com`).</li>
                     <li>Open the <strong>`services/server.js`</strong> file.</li>
                     <li>Edit the `dbConfig` section with the database credentials you saved in Step 1.</li>
-                    <li>Go to <strong>Website > Node project > Add Node project</strong>.</li>
+                    <li>Go to <strong>{'Website > Node project > Add Node project'}</strong>.</li>
                     <li>Fill out the form:
                         <ul className="list-disc list-inside ml-6 mt-2 space-y-1 bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
                            <li><strong>Path:</strong> Your project's root directory.</li>
