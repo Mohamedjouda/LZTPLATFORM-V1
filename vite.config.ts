@@ -23,6 +23,9 @@ export default defineConfig(({ mode }) => {
       // By setting `emptyOutDir` to `false`, Vite will build without trying to
       // clear the directory first, successfully working around the permission error.
       emptyOutDir: false,
+      rollupOptions: {
+        external: ['@google/genai'],
+      },
     },
   };
 });
