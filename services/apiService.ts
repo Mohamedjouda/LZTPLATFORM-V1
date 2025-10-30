@@ -27,11 +27,12 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
 
 // LZT API Proxy
 export const proxyLztRequest = (url: string, token: string): Promise<any> => {
-    // Base64 encode the URL to potentially bypass simple WAF rules that block URLs in JSON bodies.
+    // Base64 encode the URL to potentially bypass simple WAF rules.
     const encodedUrl = btoa(url);
-    return apiFetch('/proxy/lzt', {
+    // Send the encoded URL as a query parameter to avoid WAFs that inspect the POST body.
+    return apiFetch(`/proxy/lzt?url=${encodeURIComponent(encodedUrl)}`, {
         method: 'POST',
-        body: JSON.stringify({ encodedUrl, token }),
+        body: JSON.stringify({ token }), // Only send the token in the body
     });
 };
 

@@ -140,10 +140,11 @@ const parseJsonFields = (item) => {
 
 // Generic LZT API Proxy
 apiRouter.post('/proxy/lzt', async (req, res) => {
-    const { encodedUrl, token } = req.body;
+    const { url: encodedUrl } = req.query; // URL is now in the query string
+    const { token } = req.body; // Token remains in the body
 
     if (!encodedUrl || !token) {
-        return res.status(400).json({ message: 'encodedUrl and Token are required for proxy.' });
+        return res.status(400).json({ message: 'URL query parameter and Token in body are required for proxy.' });
     }
 
     try {
