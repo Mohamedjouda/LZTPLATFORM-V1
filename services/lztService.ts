@@ -1,5 +1,5 @@
 import { FilterState, Game } from '../types';
-import { getSetting } from './apiService';
+import { getSetting, proxyLztRequest } from './apiService';
 
 let lztApiToken: string | null = null;
 let isFetchingToken = false;
@@ -45,7 +45,7 @@ const getLztToken = async (): Promise<string> => {
 };
 
 /**
- * Tests a given LZT API token by making a lightweight, authenticated API call.
+ * Tests a given LZT API token by proxying the request through the backend.
  * @param token The API token to test.
  * @returns An object indicating success or failure with an error message.
  */
@@ -54,36 +54,13 @@ export const testApiToken = async (token: string): Promise<{ success: boolean; e
         return { success: false, error: 'Token cannot be empty.' };
     }
     try {
-        // Use a simple, authenticated endpoint that is lightweight.
-        // Fetching the root with a page limit of 1 is a good test.
-        const response = await fetch(`https://prod-api.lzt.market/?page=1`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-
-        if (response.ok) { // Status 200-299
-            return { success: true };
-        }
-
-        if (response.status === 401) {
-            return { success: false, error: 'Invalid API Token. The server responded with 401 Unauthorized.' };
-        }
-        
-        let errorDetails = `The server responded with status ${response.status} ${response.statusText}.`;
-        try {
-            const errorData = await response.json();
-            errorDetails += ` Details: ${JSON.stringify(errorData)}`;
-        } catch (e) {
-            // Ignore if response body is not JSON
-        }
-        return { success: false, error: errorDetails };
-
-    } catch (error) {
-        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            return { success: false, error: 'A network error occurred. This could be due to a CORS issue, an ad-blocker, or a network problem.' };
-        }
-        return { success: false, error: `An unexpected error occurred: ${(error as Error).message}` };
+        const url = `https://prod-api.lzt.market/?page=1`;
+        // Use the proxy to avoid CORS issues in the browser
+        await proxyLztRequest(url, token);
+        return { success: true };
+    } catch (error: any) {
+        // The error message is now reliably passed from the backend proxy
+        return { success: false, error: error.message };
     }
 };
 
@@ -132,30 +109,16 @@ export const fetchListings = async (
 
 
   try {
-    const response = await fetch(`${game.api_base_url}${game.list_path}?${params.toString()}`, {
-        headers: {
-        'Authorization': `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        let errorDetails = `Status: ${response.status} ${response.statusText}`;
-        try { const errorData = await response.json(); errorDetails += ` - ${JSON.stringify(errorData)}`; } catch (e) { /* ignore */ }
-        throw new Error(`API request failed. ${errorDetails}`);
-    }
-
-    const data = await response.json();
+    const url = `${game.api_base_url}${game.list_path}?${params.toString()}`;
+    const data = await proxyLztRequest(url, token);
 
     return {
         items: data.items || [],
         hasNextPage: data.hasNextPage || false,
         totalItems: data.totalItems || 0,
     };
-  } catch (error) {
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-          throw new Error('Network error: Failed to fetch from API. This might be due to a CORS issue, an ad-blocker, or a network problem.');
-      }
-      throw error;
+  } catch (error: any) {
+      throw new Error(`API request failed via proxy: ${error.message}`);
   }
 };
 
@@ -164,33 +127,22 @@ export const checkItemStatus = async (apiBaseUrl: string, checkPathTemplate: str
     const token = await getLztToken();
     
     const checkPath = checkPathTemplate.replace('{id}', itemId.toString());
+    const url = `${apiBaseUrl}${checkPath}`;
 
     try {
-        const response = await fetch(`${apiBaseUrl}${checkPath}`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-        });
-
-        if (response.status === 200) {
-            const data = await response.json();
-            // These checks might need to be generalized in the game config in the future
-            if (data.item?.item_state === 'paid') return { isActive: false, reason: 'Item has been sold.' };
-            if (data.item?.item_state === 'deleted' || data.item?.item_state === 'closed') return { isActive: false, reason: `Item state is '${data.item.item_state}'.` };
-            return { isActive: true, reason: 'Item is active.' };
-        } 
-        if (response.status === 404) {
-            return { isActive: false, reason: 'Item not found (404).' };
-        } 
+        const data = await proxyLztRequest(url, token);
         
-        let errorDetails = `Unexpected status: ${response.status}`;
-        try { const errorData = await response.json(); errorDetails += ` - ${JSON.stringify(errorData)}`; } catch(e) { /* Ignore */ }
-        console.warn(`Unexpected status code ${response.status} for item ${itemId}:`, errorDetails);
-        return { isActive: true, reason: errorDetails }; // Assume active on unknown errors
-    } catch (error) {
-        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            console.error(`Network error checking item ${itemId}. Assuming active.`);
-            return { isActive: true, reason: 'Network error during check.' };
+        // These checks might need to be generalized in the game config in the future
+        if (data.item?.item_state === 'paid') return { isActive: false, reason: 'Item has been sold.' };
+        if (data.item?.item_state === 'deleted' || data.item?.item_state === 'closed') return { isActive: false, reason: `Item state is '${data.item.item_state}'.` };
+        return { isActive: true, reason: 'Item is active.' };
+    } catch (error: any) {
+        // The error message from apiFetch will contain the status text or body message
+        if (error.message.includes('Not Found') || error.message.includes('404')) {
+            return { isActive: false, reason: 'Item not found (404).' };
         }
-        console.error(`Unknown error checking item ${itemId}:`, error);
-        return { isActive: true, reason: 'Unknown error during check.' };
+        console.warn(`Unexpected error checking item ${itemId} via proxy:`, error.message);
+        // On unknown errors, assume active to prevent incorrectly archiving items.
+        return { isActive: true, reason: `Proxy check failed: ${error.message}` };
     }
 }

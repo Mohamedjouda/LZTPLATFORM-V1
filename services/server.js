@@ -138,6 +138,36 @@ const parseJsonFields = (item) => {
 
 // --- API Routes ---
 
+// Generic LZT API Proxy
+apiRouter.post('/proxy/lzt', async (req, res) => {
+    const { url, token } = req.body;
+
+    if (!url || !token) {
+        return res.status(400).json({ message: 'URL and Token are required for proxy.' });
+    }
+
+    try {
+        const targetUrl = new URL(url);
+        // Security: ensure we are only proxying to the intended domain
+        if (targetUrl.hostname !== 'prod-api.lzt.market') {
+            return res.status(403).json({ message: 'Proxy requests are limited to prod-api.lzt.market only.' });
+        }
+
+        const lztResponse = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        const data = await lztResponse.text();
+        res.status(lztResponse.status);
+        res.setHeader('Content-Type', lztResponse.headers.get('Content-Type'));
+        res.send(data);
+
+    } catch (error) {
+        console.error(`Error proxying request to ${url}:`, error);
+        res.status(502).json({ message: `Bad Gateway: Could not connect to the external API. ${error.message}` });
+    }
+});
+
 // GET /settings/:key
 apiRouter.get('/settings/:key', async (req, res) => {
     try {
@@ -451,7 +481,12 @@ apiRouter.get('/games/:gameId/listings/for-check', async (req, res) => {
 const startServer = async () => {
   await initializeDatabase();
 
-  // The Nginx reverse proxy strips the /api prefix, so we mount the router at the root.
+  // Mount the API router at both /api and /.
+  // This makes the backend resilient to Nginx configurations.
+  // - If Nginx proxies /api/ to / (stripping the prefix), the second line handles it.
+  // - If Nginx proxies /api/ to /api/ (not stripping), the first line handles it.
+  // This robustly handles the most common 404 error source during setup.
+  app.use('/api', apiRouter);
   app.use('/', apiRouter);
 
   app.listen(port, () => {

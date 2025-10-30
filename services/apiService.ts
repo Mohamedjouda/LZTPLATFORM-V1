@@ -24,6 +24,14 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
     return {}; 
 }
 
+// LZT API Proxy
+export const proxyLztRequest = (url: string, token: string): Promise<any> => {
+    return apiFetch('/proxy/lzt', {
+        method: 'POST',
+        body: JSON.stringify({ url, token }),
+    });
+};
+
 // Settings
 export const getSetting = (key: string): Promise<string> => {
     return apiFetch(`/settings/${key}`).then(data => data.value || '');
