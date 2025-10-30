@@ -222,7 +222,7 @@ CREATE TABLE IF NOT EXISTS \`check_logs\` (
                     Step 4: Final Configuration
                 </h2>
                 <p>
-                    With the server running, open your website. Navigate to the <strong>Settings</strong> page and enter your <strong>LZT Market API Token</strong> to begin fetching data. The optional Gemini API key can be set in the `env.js` file to enable deal scores.
+                    With the server running, open your website. First, navigate to the <strong>Manage Games</strong> page and add one or more game configurations using the "Add from Preset" button. After that, go to the <strong>Settings</strong> page and enter your <strong>LZT Market API Token</strong>. The application is now ready to fetch data. The optional Gemini API key can be set in the `env.js` file to enable deal scores.
                 </p>
             </section>
         </div>

@@ -131,7 +131,8 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ view, game }) => {
     const handleBulkAction = async (action: 'hide' | 'unhide' | 'archive' | 'unarchive') => {
         setIsProcessing(true);
         setError(null);
-        const ids = Array.from(selectedIds);
+        // FIX: Explicitly type `ids` as `number[]` to resolve TypeScript inference issue.
+        const ids: number[] = Array.from(selectedIds);
         try {
             let successMessage = '';
             if (action === 'hide') {
@@ -167,7 +168,8 @@ const ListingsPage: React.FC<ListingsPageProps> = ({ view, game }) => {
             if (type === 'all') {
                 listingsToExport = await getAllListingsForExport(game, view, filters, sort);
             } else { // 'selected'
-                const ids = Array.from(selectedIds);
+                // FIX: Explicitly type `ids` as `number[]` to resolve TypeScript inference issue.
+                const ids: number[] = Array.from(selectedIds);
                 if (ids.length === 0) {
                     addNotification({ type: 'info', message: 'No items selected for export.', code: 'EXP-100' });
                     setIsExporting(null);

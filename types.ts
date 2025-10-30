@@ -1,4 +1,3 @@
-
 export interface GameColumn {
     id: string;
     label: string;
@@ -97,13 +96,15 @@ export interface Notification {
     read: boolean;
 }
 
-// Global declaration for process.env, which is provided at runtime via env.js
+// Global declaration for process.env, which is injected by Vite during build.
+// This allows using process.env.API_KEY in the client-side code.
+// FIX: The previous `declare var process` was incomplete and conflicted with the Node.js `process` type.
+// This is replaced with a global augmentation of `NodeJS.ProcessEnv` which is safer and correctly
+// adds the API_KEY type without breaking other `process` properties like `cwd()`.
 declare global {
-    interface Window {
-        process: {
-            env: {
-                API_KEY?: string;
-            }
-        }
+  namespace NodeJS {
+    interface ProcessEnv {
+      API_KEY?: string;
     }
+  }
 }

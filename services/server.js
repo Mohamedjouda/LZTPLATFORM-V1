@@ -2,6 +2,7 @@
 import express from 'express';
 import mysql from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
+import cors from 'cors';
 
 const app = express();
 const apiRouter = express.Router(); // Create a router
@@ -25,6 +26,7 @@ const dbConfig = {
 const pool = mysql.createPool(dbConfig);
 
 // --- Middleware ---
+app.use(cors());
 app.use(express.json());
 
 // --- Helper Functions ---
@@ -245,9 +247,19 @@ apiRouter.post('/listings/bulk-upsert', async (req, res) => {
             const values = keys.map(k => (typeof listing[k] === 'object' && listing[k] !== null) ? JSON.stringify(listing[k]) : listing[k]);
             const fields = keys.map(k => `\`${k}\``).join(',');
             const placeholders = keys.map(() => '?').join(',');
-            const onUpdate = keys.map(k => `\`${k}\` = VALUES(\`${k}\`)`).join(',');
-            const [result] = await connection.execute(`INSERT INTO \`listings\` (${fields}) VALUES (${placeholders}) ON DUPLICATE KEY UPDATE ${onUpdate}`, values);
-            upsertedCount += result.affectedRows;
+            
+            // On update, do not change user-managed fields.
+            const updateKeys = keys.filter(k => !['item_id', 'game_id', 'is_hidden', 'is_archived', 'archived_reason', 'archived_at', 'first_seen_at'].includes(k));
+
+            if (updateKeys.length > 0) {
+                const onUpdate = updateKeys.map(k => `\`${k}\` = VALUES(\`${k}\`)`).join(',');
+                const [result] = await connection.execute(`INSERT INTO \`listings\` (${fields}) VALUES (${placeholders}) ON DUPLICATE KEY UPDATE ${onUpdate}`, values);
+                upsertedCount += result.affectedRows;
+            } else {
+                 // This case might happen if only primary keys are sent. We can insert-ignore.
+                const [result] = await connection.execute(`INSERT IGNORE INTO \`listings\` (${fields}) VALUES (${placeholders})`, values);
+                upsertedCount += result.affectedRows;
+            }
         }
         await connection.commit();
         res.json({ upserted: upsertedCount });

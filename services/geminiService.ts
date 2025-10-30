@@ -6,11 +6,11 @@ let ai: GoogleGenAI | null = null;
 
 const getAIClient = () => {
   if (!ai) {
-    if (!window.process?.env?.API_KEY || window.process.env.API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+    if (!process.env.API_KEY || process.env.API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
       console.error("Gemini API key is not set in environment variables or is a placeholder.");
       return null;
     }
-    ai = new GoogleGenAI({ apiKey: window.process.env.API_KEY });
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
   return ai;
 };
