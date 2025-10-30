@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 type IconProps = React.SVGProps<SVGSVGElement>;
@@ -247,5 +248,13 @@ export const CogIcon: React.FC<IconProps> = (props) => (
         <path d="m3.34 17 1.73-1" />
         <path d="m17 3.34-1 1.73" />
         <path d="m11 13.73-4 6.93" />
+    </svg>
+);
+
+export const VialIcon: React.FC<IconProps> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M5 21h14" />
+        <path d="M6 21l2-14h8l2 14" />
+        <path d="M6 14h12" />
     </svg>
 );
