@@ -54,7 +54,9 @@ export const testApiToken = async (token: string): Promise<{ success: boolean; e
         return { success: false, error: 'Token cannot be empty.' };
     }
     try {
-        const url = `https://api.lzt.market/?page=1`;
+        // Use a known-good endpoint from the LZT API documentation for a reliable check.
+        // Using a static item ID is sufficient to validate the token and endpoint.
+        const url = `https://prod-api.lzt.market/item/194483127/check-account`;
         // Use the proxy to avoid CORS issues in the browser
         const result = await proxyLztRequest(url, token);
         // The LZT API can return a 200 OK but with an error message in the body
