@@ -3,6 +3,12 @@ import express from 'express';
 import mysql from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
 import cors from 'cors';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const apiRouter = express.Router(); // Create a router
@@ -137,6 +143,20 @@ const parseJsonFields = (item) => {
 
 
 // --- API Routes ---
+
+// GET /version - returns the app version from package.json
+apiRouter.get('/version', async (req, res) => {
+    try {
+        const packageJsonPath = path.join(__dirname, '..', 'package.json');
+        const packageJsonData = await fs.readFile(packageJsonPath, 'utf8');
+        const { version } = JSON.parse(packageJsonData);
+        res.json({ version });
+    } catch (error) {
+        console.error('Failed to read package.json for version:', error);
+        res.status(500).json({ message: 'Could not retrieve application version.' });
+    }
+});
+
 
 // Generic LZT API Proxy
 apiRouter.post('/proxy/lzt', async (req, res) => {

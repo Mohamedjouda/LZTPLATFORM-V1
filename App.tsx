@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Game } from './types';
-import { getGames, initializeDefaultGames } from './services/apiService';
+import { getGames, getAppVersion } from './services/apiService';
 import MarketplacePage from './components/MarketplacePage';
 import GameManagementPage from './components/GameManagementPage';
 import SetupGuidePage from './components/SetupGuidePage';
@@ -19,7 +19,20 @@ const AppContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>('light');
+  const [appVersion, setAppVersion] = useState<string>('...');
   const { addNotification } = useNotifications();
+
+  useEffect(() => {
+    const fetchVersion = async () => {
+      try {
+        const version = await getAppVersion();
+        setAppVersion(version);
+      } catch (e) {
+        setAppVersion('?.?.?');
+      }
+    };
+    fetchVersion();
+  }, []);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme') as Theme | null;
@@ -153,7 +166,7 @@ const AppContent: React.FC = () => {
            {isSidebarOpen && (
             <div className="flex items-baseline space-x-2">
               <span className="text-xl font-semibold">U.G.L.P.</span>
-              <span className="text-xs font-mono text-gray-400">v{__APP_VERSION__}</span>
+              <span className="text-xs font-mono text-gray-400">v{appVersion}</span>
             </div>
            )}
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500">

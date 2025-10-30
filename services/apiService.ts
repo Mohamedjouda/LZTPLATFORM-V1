@@ -25,6 +25,11 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
     return {}; 
 }
 
+// Version
+export const getAppVersion = (): Promise<string> => {
+    return apiFetch('/version').then(data => data.version || '?.?.?');
+};
+
 // LZT API Proxy
 export const proxyLztRequest = (url: string, token: string): Promise<any> => {
     // Base64 encode the URL to potentially bypass simple WAF rules.

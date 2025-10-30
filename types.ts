@@ -98,9 +98,6 @@ export interface Notification {
 
 // Global declaration for variables injected by Vite at build time.
 declare global {
-  // This constant is defined in vite.config.ts
-  const __APP_VERSION__: string;
-
   namespace NodeJS {
     interface ProcessEnv {
       API_KEY?: string;
