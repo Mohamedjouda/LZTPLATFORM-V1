@@ -26,8 +26,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         // Externalize peer dependencies that are provided via the import map in index.html.
         // This prevents the build from failing when it can't find these packages in node_modules.
-        // Using a regex for robustness.
-        external: [/@google\/genai/],
+        external: ['@google/genai'],
       },
     },
   };
