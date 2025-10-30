@@ -23,6 +23,11 @@ export default defineConfig(({ mode }) => {
       // By setting `emptyOutDir` to `false`, Vite will build without trying to
       // clear the directory first, successfully working around the permission error.
       emptyOutDir: false,
+      rollupOptions: {
+        // Externalize peer dependencies that are provided via the import map in index.html.
+        // This prevents the build from failing when it can't find these packages in node_modules.
+        external: ['@google/genai'],
+      },
     },
   };
 });
