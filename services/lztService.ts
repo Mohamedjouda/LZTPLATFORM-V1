@@ -56,11 +56,16 @@ export const testApiToken = async (token: string): Promise<{ success: boolean; e
     try {
         const url = `https://prod-api.lzt.market/?page=1`;
         // Use the proxy to avoid CORS issues in the browser
-        await proxyLztRequest(url, token);
+        const result = await proxyLztRequest(url, token);
+        // The LZT API can return a 200 OK but with an error message in the body
+        if (result && result.errors) {
+            return { success: false, error: result.errors.join(', ') };
+        }
         return { success: true };
     } catch (error: any) {
-        // The error message is now reliably passed from the backend proxy
-        return { success: false, error: error.message };
+        // The error message is now more reliably passed from the backend proxy
+        const errorMessage = error.message || 'A network error occurred. Check browser console for details.';
+        return { success: false, error: errorMessage };
     }
 };
 

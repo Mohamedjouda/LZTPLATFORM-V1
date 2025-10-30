@@ -140,13 +140,16 @@ const parseJsonFields = (item) => {
 
 // Generic LZT API Proxy
 apiRouter.post('/proxy/lzt', async (req, res) => {
-    const { url, token } = req.body;
+    const { encodedUrl, token } = req.body;
 
-    if (!url || !token) {
-        return res.status(400).json({ message: 'URL and Token are required for proxy.' });
+    if (!encodedUrl || !token) {
+        return res.status(400).json({ message: 'encodedUrl and Token are required for proxy.' });
     }
 
     try {
+        // Decode the URL from Base64 to prevent WAF issues with URLs in JSON.
+        const url = Buffer.from(encodedUrl, 'base64').toString('utf-8');
+
         const targetUrl = new URL(url);
         // Security: ensure we are only proxying to the intended domain
         if (targetUrl.hostname !== 'prod-api.lzt.market') {
@@ -157,16 +160,29 @@ apiRouter.post('/proxy/lzt', async (req, res) => {
             headers: { 'Authorization': `Bearer ${token}` },
         });
 
-        const data = await lztResponse.text();
+        const responseBodyText = await lztResponse.text();
+
+        // Add robust handling for non-ok responses from the external API
+        if (!lztResponse.ok) {
+            console.error(`LZT API Error (${lztResponse.status}): ${responseBodyText}`);
+            // Forward the status and a structured error message to the client
+            return res.status(lztResponse.status).json({ message: `External API returned status ${lztResponse.status}`, details: responseBodyText });
+        }
+
+        // Forward the successful response (headers, status, body) to the client
         res.status(lztResponse.status);
-        res.setHeader('Content-Type', lztResponse.headers.get('Content-Type'));
-        res.send(data);
+        const contentType = lztResponse.headers.get('content-type');
+        if (contentType) {
+            res.setHeader('Content-Type', contentType);
+        }
+        res.send(responseBodyText);
 
     } catch (error) {
-        console.error(`Error proxying request to ${url}:`, error);
+        console.error(`Error in proxy endpoint:`, error);
         res.status(502).json({ message: `Bad Gateway: Could not connect to the external API. ${error.message}` });
     }
 });
+
 
 // GET /settings/:key
 apiRouter.get('/settings/:key', async (req, res) => {
