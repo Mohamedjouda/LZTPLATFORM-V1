@@ -186,6 +186,10 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
         }
     };
 
+    const existingSlugs = new Set(games.map(g => g.slug));
+    const availablePresets = Object.keys(gamePresets)
+        .filter(key => !existingSlugs.has((gamePresets as Record<string, any>)[key].slug));
+
     if (isLoading) {
         return <div className="flex justify-center items-center h-64"><Loader2 className="w-12 h-12 animate-spin text-primary-500" /></div>;
     }
@@ -209,11 +213,15 @@ const GameManagementPage: React.FC<{ onGamesUpdated: () => void; }> = ({ onGames
                         {isPresetDropdownOpen && (
                             <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 z-10">
                                 <div className="py-1" role="menu" aria-orientation="vertical">
-                                    {Object.keys(gamePresets).map(key => (
-                                        <button key={key} onClick={() => handleAddFromPreset(key)} className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">
-                                            {(gamePresets as any)[key].name}
-                                        </button>
-                                    ))}
+                                    {availablePresets.length > 0 ? (
+                                        availablePresets.map(key => (
+                                            <button key={key} onClick={() => handleAddFromPreset(key)} className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">
+                                                {(gamePresets as any)[key].name}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">All presets have been added.</div>
+                                    )}
                                 </div>
                             </div>
                         )}

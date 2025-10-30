@@ -318,8 +318,13 @@ apiRouter.patch('/logs/check/:logId', async (req, res) => {
     res.json({ message: 'Log updated' });
 });
 
-// Mount the API router at the /api prefix.
+// Mount the API router.
+// By mounting at /api, we handle correctly configured Nginx (no trailing slash).
+// By mounting at / as well, we create a fallback that handles misconfigured
+// Nginx (with a trailing slash) where the /api prefix is stripped.
 app.use('/api', apiRouter);
+app.use(apiRouter);
+
 
 // --- Server Start ---
 initializeDatabase().then(() => {
