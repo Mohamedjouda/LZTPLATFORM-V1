@@ -318,8 +318,8 @@ apiRouter.patch('/logs/check/:logId', async (req, res) => {
     res.json({ message: 'Log updated' });
 });
 
-// Mount the entire router at the root. Nginx will handle the /api prefix.
-app.use('/', apiRouter);
+// Mount the API router at the /api prefix.
+app.use('/api', apiRouter);
 
 // --- Server Start ---
 initializeDatabase().then(() => {

@@ -118,9 +118,8 @@ server {
 
     # --- Reverse Proxy for the BACKEND API ---
     # This sends all API calls to your Node.js server.
-    # The trailing slash on proxy_pass is CRITICAL. It strips /api/ from the request.
     location /api/ {
-        proxy_pass http://127.0.0.1:3001/; # <-- IMPORTANT: Trailing slash is required.
+        proxy_pass http://127.0.0.1:3001; # <-- IMPORTANT: No trailing slash.
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

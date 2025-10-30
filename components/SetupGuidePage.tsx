@@ -34,7 +34,7 @@ const NginxConfigExample = `server {
     # Reverse Proxy for Backend API
     # Forwards /api/* requests to the Node.js server
     location /api/ {
-        proxy_pass http://127.0.0.1:3001/; # <-- CRITICAL: Trailing slash is required
+        proxy_pass http://127.0.0.1:3001; # <-- Note: No trailing slash. Backend handles /api prefix.
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -124,7 +124,7 @@ const SetupGuidePage: React.FC = () => {
                 <li>
                     <strong>Configure Nginx Reverse Proxy:</strong> This is the most common point of failure. Go to <strong>Website</strong>, click **Config** for your domain, and replace the entire configuration with the template below.
                     <div className="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-800 dark:text-yellow-300 p-4 rounded-r-lg my-4">
-                      <p><strong className="font-bold">Important:</strong> The trailing slash (`/`) on the `proxy_pass` directive is essential. It correctly routes `/api/*` requests to your backend.</p>
+                      <p><strong className="font-bold">Important:</strong> The backend now handles the <code>/api</code> prefix. Ensure your <code>proxy_pass</code> directive points to the backend port without a trailing slash (<code>http://127.0.0.1:3001</code>).</p>
                     </div>
                     <CodeBlock code={NginxConfigExample} />
                 </li>
