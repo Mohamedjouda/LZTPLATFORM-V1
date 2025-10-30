@@ -12,18 +12,15 @@ export default defineConfig(({ mode }) => {
   // Load env file based on mode (development, production)
   const env = loadEnv(mode, cwd(), '');
 
-  // Manually set the version from package.json as an environment variable.
-  // Vite will automatically pick up any env variables prefixed with VITE_
-  // and expose them on `import.meta.env`. This is the standard, reliable way to handle
-  // build-time environment variables and fixes the previous TypeError.
-  process.env.VITE_APP_VERSION = packageJson.version;
-
   return {
     plugins: [react()],
     define: {
       // Expose environment variables to the client-side code that are NOT prefixed with VITE_.
       // This is necessary for variables like API_KEY which are expected on `process.env`.
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
+      // Directly replace `import.meta.env.VITE_APP_VERSION` with the version from package.json at build time.
+      // This is a robust method to avoid runtime errors if `import.meta.env` is not populated as expected.
+      'import.meta.env.VITE_APP_VERSION': JSON.stringify(packageJson.version),
     },
     build: {
       // By default, Vite empties the outDir on build.
