@@ -1,87 +1,88 @@
 import React from 'react';
-import { BookOpenIcon, CogIcon, DatabaseIcon, AlertTriangle } from './Icons';
-
-const GuideSection: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
-        <div className="flex items-center mb-4">
-            <div className="bg-primary-100 dark:bg-primary-900/50 p-2 rounded-full mr-4">
-                {icon}
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
-        </div>
-        <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
-            {children}
-        </div>
-    </div>
-);
+import { DatabaseIcon, CogIcon, EditIcon } from './Icons';
 
 const SetupGuidePage: React.FC = () => {
-    return (
-        <div className="space-y-8">
-            <div className="text-center">
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Setup Guide</h1>
-                <p className="mt-4 text-lg text-gray-500 dark:text-gray-400">Welcome to U.G.L.P. (Unified Game Listing Platform). Follow these steps to get started.</p>
-            </div>
-
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-500 p-4 rounded-md" role="alert">
-                <div className="flex">
-                    <div className="flex-shrink-0">
-                        <AlertTriangle className="h-5 w-5 text-yellow-400 dark:text-yellow-500" aria-hidden="true" />
-                    </div>
-                    <div className="ml-3">
-                        <p className="text-sm text-yellow-700 dark:text-yellow-200">
-                            <strong>Critical Prerequisite:</strong> This is a front-end application that requires a separately configured and running back-end server. This guide assumes your back-end is already deployed and accessible.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <GuideSection icon={<CogIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />} title="1. Configure API Tokens">
-                    <p>The application requires API tokens to communicate with external services. These are stored securely in your database via the backend.</p>
-                    <ol>
-                        <li>Navigate to the <strong>Settings</strong> page using the sidebar menu.</li>
-                        <li>
-                            <strong>LZT Market API Token:</strong> You need a bearer token from LZT Market. You can obtain this from your account settings on the LZT Market website (<code>lolz.guru/account/api</code>). Paste this token into the input field and click "Save and Test".
-                        </li>
-                        <li>
-                            <strong>Gemini API Key (Optional):</strong> For the 'Deal Score' feature to work, a Google Gemini API key is required. This key must be set as an environment variable named <code>API_KEY</code> in a <code>.env</code> file at the root of your front-end project. The application will automatically use it if available. Without it, the deal score feature will be disabled.
-                        </li>
-                    </ol>
-                </GuideSection>
-
-                <GuideSection icon={<BookOpenIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />} title="2. Manage Games">
-                    <p>Define the game marketplaces you want to monitor.</p>
-                    <ul>
-                        <li>Go to the <strong>Manage Games</strong> page.</li>
-                        <li>Click <strong>"Add from Preset"</strong> to quickly add a pre-configured game like Fortnite, Steam, or Riot Games. This is the recommended method.</li>
-                        <li>Alternatively, click <strong>"Add Custom Game"</strong> to manually configure all API paths, data columns, and filters. This is an advanced option for custom integrations.</li>
-                        <li>Once a game is added, it will appear in the sidebar. Click on it to view its marketplace dashboard.</li>
-                    </ul>
-                </GuideSection>
-
-                <GuideSection icon={<DatabaseIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />} title="3. Understanding Workers">
-                    <p>Automated tasks run in the background to keep your data fresh. These are controlled by the "Fetch" and "Check" toggles for each game.</p>
-                    <dl>
-                        <dt>Fetch Worker</dt>
-                        <dd>This worker periodically queries the LZT Market API for new listings for a specific game. It adds new items to your database and updates existing ones.</dd>
-                        <dt>Check Worker</dt>
-                        <dd>This worker checks the status of your active listings. If an item has been sold, deleted, or is no longer available, it will be automatically moved to the "Archived" section.</dd>
-                    </dl>
-                    <p>You can also trigger these workers manually from the Dashboard page for any game.</p>
-                </GuideSection>
-                
-                <GuideSection icon={<AlertTriangle className="w-6 h-6 text-primary-600 dark:text-primary-400" />} title="Troubleshooting">
-                     <p>If you encounter errors, here are some common solutions:</p>
-                    <ul>
-                        <li><strong>"Could not connect to backend"</strong>: Ensure your backend server is running and that the frontend is configured to connect to the correct address. Check your browser's developer console for network errors.</li>
-                        <li><strong>"LZT Market API token is not configured"</strong>: Go to the Settings page and ensure your LZT token is saved and valid.</li>
-                        <li><strong>Fetch/Check errors</strong>: The LZT API might be temporarily unavailable, or your token might have expired. Test your token on the Settings page. Check the logs on the game's Dashboard for specific error messages.</li>
-                    </ul>
-                </GuideSection>
-            </div>
+  const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
+      <div className="flex items-center mb-4">
+        <div className="bg-primary-100 dark:bg-primary-900/50 p-2 rounded-lg mr-4">
+          {icon}
         </div>
-    );
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
+      </div>
+      <div className="space-y-3 text-gray-600 dark:text-gray-400">
+        {children}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div className="text-center">
+        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
+          U.G.L.P. Setup Guide
+        </h1>
+        <p className="mt-4 text-lg text-gray-500 dark:text-gray-400">
+          Welcome! Follow these steps to get your Universal Game Listing Platform up and running.
+        </p>
+      </div>
+
+      <Section icon={<DatabaseIcon className="w-6 h-6 text-primary-500" />} title="Step 1: Backend & Database Setup">
+        <p>
+          This application requires a backend server and a database to store game configurations, listings, and logs.
+        </p>
+        <ul className="list-disc list-inside space-y-2 pl-4">
+          <li>Ensure you have the backend server running and accessible. The frontend is configured to communicate with it via a proxy at <code>/api</code>.</li>
+          <li>The backend needs to be connected to a database (e.g., Supabase/PostgreSQL). Make sure the database schema is correctly migrated.</li>
+          <li>If you see an error on the main dashboard about "Could not connect to backend", it means the frontend cannot reach your server. Check your server logs and network configuration.</li>
+        </ul>
+      </Section>
+
+      <Section icon={<CogIcon className="w-6 h-6 text-primary-500" />} title="Step 2: Configure API Keys">
+        <p>
+          The platform relies on external APIs to fetch data. You must configure the necessary API keys in the settings.
+        </p>
+        <ol className="list-decimal list-inside space-y-2 pl-4">
+          <li>Navigate to the <strong className="text-gray-800 dark:text-gray-200">Settings</strong> page from the sidebar.</li>
+          <li>
+            Enter your <strong>LZT Market API Token</strong>. You can obtain this from your LZT Market account settings. This token is required for fetching listing data.
+          </li>
+          <li>
+            (Optional) Configure your <strong>Gemini API Key</strong> in the backend environment variables. This is used for the "Deal Score" calculation feature. If not provided, deal scores will not be available.
+          </li>
+          <li>After entering a token, use the "Save and Test" button to verify its validity. A success message confirms the connection is working.</li>
+        </ol>
+      </Section>
+
+      <Section icon={<EditIcon className="w-6 h-6 text-primary-500" />} title="Step 3: Manage Games">
+        <p>
+          Once your APIs are configured, you need to tell the platform which game marketplaces to monitor.
+        </p>
+        <ol className="list-decimal list-inside space-y-2 pl-4">
+          <li>Go to the <strong className="text-gray-800 dark:text-gray-200">Manage Games</strong> page.</li>
+          <li>
+            Click <strong>"Add from Preset"</strong> to quickly add a supported game. This is the recommended method as it pre-fills all the complex API configurations.
+          </li>
+          <li>
+            Alternatively, you can create a <strong>"Custom Game"</strong> configuration if you know the specific API endpoints and data structure. This is an advanced feature.
+          </li>
+          <li>For each game, you can enable or disable the <strong>Fetch Worker</strong> and <strong>Check Worker</strong>.
+            <ul className="list-disc list-inside pl-6 mt-1">
+              <li><strong>Fetch Worker:</strong> Periodically scans the marketplace for new listings.</li>
+              <li><strong>Check Worker:</strong> Periodically checks the status of existing listings (e.g., to see if they've been sold or removed).</li>
+            </ul>
+          </li>
+        </ol>
+      </Section>
+
+      <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-6 rounded-lg">
+        <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-300">You're All Set!</h3>
+        <p className="mt-2 text-blue-700 dark:text-blue-400">
+          After adding games, navigate to their marketplace view from the sidebar. You can use the dashboard to manually trigger fetches and checks, or wait for the automated workers to run. Happy monitoring!
+        </p>
+      </div>
+    </div>
+  );
 };
 
 export default SetupGuidePage;
