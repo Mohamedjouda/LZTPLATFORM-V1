@@ -174,7 +174,7 @@ apiRouter.post('/proxy/lzt', async (req, res) => {
         
         const decodedUrl = Buffer.from(encodedUrl, 'base64').toString('utf-8');
         const urlObject = new URL(decodedUrl);
-        if (urlObject.hostname !== 'prod-api.lzt.market') return res.status(403).json({ message: "Proxy is limited to the LZT API." });
+        if (urlObject.hostname !== 'api.lzt.market') return res.status(403).json({ message: "Proxy is limited to the LZT API." });
 
         const response = await fetch(decodedUrl, { headers: { 'Authorization': `Bearer ${token}` } });
         const data = await response.json();

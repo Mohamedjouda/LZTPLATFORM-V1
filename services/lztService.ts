@@ -54,7 +54,7 @@ export const testApiToken = async (token: string): Promise<{ success: boolean; e
         return { success: false, error: 'Token cannot be empty.' };
     }
     try {
-        const url = `https://api.lzt.market/?page=1`;
+        const url = `https://api.lzt.market/me`;
         // Use the proxy to avoid CORS issues in the browser
         const result = await proxyLztRequest(url, token);
         // The LZT API can return a 200 OK but with an error message in the body
