@@ -1,88 +1,140 @@
 import React from 'react';
-import { DatabaseIcon, CogIcon, EditIcon } from './Icons';
+import { ExternalLinkIcon } from './Icons';
+
+const GuideSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+    <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white border-b pb-2 dark:border-gray-700">{title}</h2>
+        <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
+            {children}
+        </div>
+    </div>
+);
+
+const CodeBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <pre className="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto">
+        <code className="text-sm font-mono">{children}</code>
+    </pre>
+);
 
 const SetupGuidePage: React.FC = () => {
-  const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
-      <div className="flex items-center mb-4">
-        <div className="bg-primary-100 dark:bg-primary-900/50 p-2 rounded-lg mr-4">
-          {icon}
+    return (
+        <div className="max-w-4xl mx-auto">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
+                <h1 className="text-3xl font-extrabold mb-2 text-gray-900 dark:text-white">U.G.L.P. Setup Guide</h1>
+                <p className="mb-8 text-lg text-gray-500 dark:text-gray-400">Welcome! This guide will walk you through setting up the Universal Game Listing Platform.</p>
+
+                <GuideSection title="Overview">
+                    <p>
+                        This application is designed to fetch, display, and analyze game account listings from the LZT Market. It consists of two main parts:
+                    </p>
+                    <ul>
+                        <li>A <strong>React Frontend</strong> (what you are looking at now) for interacting with the data.</li>
+                        <li>A <strong>Backend Server</strong> that communicates with the LZT API, manages a database, and serves data to the frontend.</li>
+                    </ul>
+                    <p>
+                        Proper setup of both components is crucial for the application to function correctly.
+                    </p>
+                </GuideSection>
+
+                <GuideSection title="Backend Setup">
+                    <p>
+                        The backend requires a connection to a database and environment variables to be set.
+                    </p>
+                    <h3 className="text-xl font-semibold mt-6 mb-2">1. Database Configuration</h3>
+                    <p>
+                        The application uses a database to store listings, games, logs, and settings. Ensure your backend server is correctly configured to connect to your database (e.g., PostgreSQL). The server should handle table creation automatically on its first run.
+                    </p>
+                     <h3 className="text-xl font-semibold mt-6 mb-2">2. Environment Variables</h3>
+                    <p>
+                        Your backend server needs a <code>.env</code> file with the necessary credentials. Create a file named <code>.env</code> in the root of your backend project with the following content:
+                    </p>
+                    <CodeBlock>
+                        {`# Database connection string
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+
+# A secret key for signing sessions, etc.
+# Generate a long, random string for this.
+SECRET_KEY="your-super-secret-key"
+
+# Port for the backend server to run on
+PORT=3001`}
+                    </CodeBlock>
+                    <p>
+                        Replace the placeholder values with your actual database credentials and a secure secret key.
+                    </p>
+                     <h3 className="text-xl font-semibold mt-6 mb-2">3. Starting the Backend</h3>
+                    <p>
+                        Once configured, start your backend server. If it's a Node.js project, you would typically run:
+                    </p>
+                    <CodeBlock>
+                        npm install
+                        <br />
+                        npm start
+                    </CodeBlock>
+                     <p>
+                        Check the server logs to ensure it starts without errors and connects to the database successfully.
+                    </p>
+                </GuideSection>
+
+                <GuideSection title="Frontend & API Configuration">
+                     <h3 className="text-xl font-semibold mt-6 mb-2">1. Connecting to the Backend</h3>
+                     <p>
+                        The frontend is configured to send API requests to <code>/api</code>. This requires a proxy setup in your web server (like Nginx or Caddy) or in the Vite development server to forward these requests to your running backend (e.g., on port 3001).
+                     </p>
+                     <p>
+                        If you are running this locally with Vite, you can add a proxy to your <code>vite.config.ts</code>:
+                     </p>
+                     <CodeBlock>{`
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      }
+    }
+  }
+                     `}</CodeBlock>
+
+                    <h3 className="text-xl font-semibold mt-6 mb-2">2. Setting the LZT Market API Token</h3>
+                    <p>
+                        The application needs an API token to fetch data from LZT Market.
+                    </p>
+                    <ol>
+                        <li>Navigate to the <strong>Settings</strong> page in this application.</li>
+                        <li>
+                            Obtain your Bearer Token from your LZT Market account settings.
+                            <a href="https://lolz.guru/account/api" target="_blank" rel="noopener noreferrer" className="ml-2 text-primary-500 hover:underline inline-flex items-center">
+                                Go to LZT API page <ExternalLinkIcon className="w-4 h-4 ml-1" />
+                            </a>
+                        </li>
+                        <li>Paste the token into the input field and click "Save and Test Token".</li>
+                        <li>You should see success notifications if the token is saved and validated correctly.</li>
+                    </ol>
+                </GuideSection>
+
+                <GuideSection title="Troubleshooting">
+                    <h3 className="text-xl font-semibold mt-6 mb-2">"Could not connect to backend" Error</h3>
+                    <p>
+                        This error (Code: APP-503) means the frontend cannot reach the backend server.
+                    </p>
+                    <ul>
+                        <li>Ensure your backend server is running and accessible.</li>
+                        <li>Check your web server's proxy configuration to make sure requests to <code>/api</code> are correctly forwarded to the backend.</li>
+                        <li>Check your browser's developer console (Network tab) for failed API requests to see more details.</li>
+                    </ul>
+
+                    <h3 className="text-xl font-semibold mt-6 mb-2">"Token test failed" Error</h3>
+                     <p>
+                        This error (Code: SET-502) on the Settings page means the LZT API rejected your token.
+                    </p>
+                    <ul>
+                        <li>Double-check that you have copied the correct and complete token from the LZT Market website.</li>
+                        <li>Ensure the token has not expired or been revoked.</li>
+                    </ul>
+                </GuideSection>
+            </div>
         </div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
-      </div>
-      <div className="space-y-3 text-gray-600 dark:text-gray-400">
-        {children}
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
-          U.G.L.P. Setup Guide
-        </h1>
-        <p className="mt-4 text-lg text-gray-500 dark:text-gray-400">
-          Welcome! Follow these steps to get your Universal Game Listing Platform up and running.
-        </p>
-      </div>
-
-      <Section icon={<DatabaseIcon className="w-6 h-6 text-primary-500" />} title="Step 1: Backend & Database Setup">
-        <p>
-          This application requires a backend server and a database to store game configurations, listings, and logs.
-        </p>
-        <ul className="list-disc list-inside space-y-2 pl-4">
-          <li>Ensure you have the backend server running and accessible. The frontend is configured to communicate with it via a proxy at <code>/api</code>.</li>
-          <li>The backend needs to be connected to a database (e.g., Supabase/PostgreSQL). Make sure the database schema is correctly migrated.</li>
-          <li>If you see an error on the main dashboard about "Could not connect to backend", it means the frontend cannot reach your server. Check your server logs and network configuration.</li>
-        </ul>
-      </Section>
-
-      <Section icon={<CogIcon className="w-6 h-6 text-primary-500" />} title="Step 2: Configure API Keys">
-        <p>
-          The platform relies on external APIs to fetch data. You must configure the necessary API keys in the settings.
-        </p>
-        <ol className="list-decimal list-inside space-y-2 pl-4">
-          <li>Navigate to the <strong className="text-gray-800 dark:text-gray-200">Settings</strong> page from the sidebar.</li>
-          <li>
-            Enter your <strong>LZT Market API Token</strong>. You can obtain this from your LZT Market account settings. This token is required for fetching listing data.
-          </li>
-          <li>
-            (Optional) Configure your <strong>Gemini API Key</strong> in the backend environment variables. This is used for the "Deal Score" calculation feature. If not provided, deal scores will not be available.
-          </li>
-          <li>After entering a token, use the "Save and Test" button to verify its validity. A success message confirms the connection is working.</li>
-        </ol>
-      </Section>
-
-      <Section icon={<EditIcon className="w-6 h-6 text-primary-500" />} title="Step 3: Manage Games">
-        <p>
-          Once your APIs are configured, you need to tell the platform which game marketplaces to monitor.
-        </p>
-        <ol className="list-decimal list-inside space-y-2 pl-4">
-          <li>Go to the <strong className="text-gray-800 dark:text-gray-200">Manage Games</strong> page.</li>
-          <li>
-            Click <strong>"Add from Preset"</strong> to quickly add a supported game. This is the recommended method as it pre-fills all the complex API configurations.
-          </li>
-          <li>
-            Alternatively, you can create a <strong>"Custom Game"</strong> configuration if you know the specific API endpoints and data structure. This is an advanced feature.
-          </li>
-          <li>For each game, you can enable or disable the <strong>Fetch Worker</strong> and <strong>Check Worker</strong>.
-            <ul className="list-disc list-inside pl-6 mt-1">
-              <li><strong>Fetch Worker:</strong> Periodically scans the marketplace for new listings.</li>
-              <li><strong>Check Worker:</strong> Periodically checks the status of existing listings (e.g., to see if they've been sold or removed).</li>
-            </ul>
-          </li>
-        </ol>
-      </Section>
-
-      <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-6 rounded-lg">
-        <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-300">You're All Set!</h3>
-        <p className="mt-2 text-blue-700 dark:text-blue-400">
-          After adding games, navigate to their marketplace view from the sidebar. You can use the dashboard to manually trigger fetches and checks, or wait for the automated workers to run. Happy monitoring!
-        </p>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default SetupGuidePage;
