@@ -6,7 +6,7 @@ import { RefreshCwIcon } from './Icons';
 const VersionChecker: React.FC = () => {
   const [isOutdated, setIsOutdated] = useState(false);
   const { addNotification } = useNotifications();
-  const clientVersion = import.meta.env.VITE_APP_VERSION;
+  const clientVersion = process.env.APP_VERSION;
 
   useEffect(() => {
     const checkVersion = async () => {

@@ -20,7 +20,7 @@ const AppContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>('light');
-  const [appVersion, setAppVersion] = useState<string>(import.meta.env.VITE_APP_VERSION || '?.?.?');
+  const [appVersion, setAppVersion] = useState<string>(process.env.APP_VERSION || '?.?.?');
   const { addNotification } = useNotifications();
 
   useEffect(() => {

@@ -101,15 +101,7 @@ declare global {
   namespace NodeJS {
     interface ProcessEnv {
       API_KEY?: string;
+      APP_VERSION?: string;
     }
   }
-}
-
-// Adding Vite specific environment variables for TypeScript
-interface ImportMetaEnv {
-  readonly VITE_APP_VERSION: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
 }

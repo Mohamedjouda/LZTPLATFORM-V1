@@ -15,12 +15,12 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // Expose environment variables to the client-side code that are NOT prefixed with VITE_.
+      // Expose environment variables to the client-side code.
       // This is necessary for variables like API_KEY which are expected on `process.env`.
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
-      // Directly replace `import.meta.env.VITE_APP_VERSION` with the version from package.json at build time.
-      // This is a robust method to avoid runtime errors if `import.meta.env` is not populated as expected.
-      'import.meta.env.VITE_APP_VERSION': JSON.stringify(packageJson.version),
+      // Define the app version on process.env as well, as this has proven more reliable
+      // in the target environment than a global constant.
+      'process.env.APP_VERSION': JSON.stringify(packageJson.version),
     },
     build: {
       // By default, Vite empties the outDir on build.
