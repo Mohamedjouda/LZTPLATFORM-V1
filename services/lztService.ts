@@ -54,16 +54,19 @@ export const testApiToken = async (token: string): Promise<{ success: boolean; e
         return { success: false, error: 'Token cannot be empty.' };
     }
     try {
-        // Use a known-good endpoint from the LZT API documentation for a reliable check.
-        // Using a static item ID is sufficient to validate the token and endpoint.
-        const url = `https://prod-api.lzt.market/item/194483127/check-account`;
+        // Use the /me endpoint for a reliable token validation check.
+        const url = `https://prod-api.lzt.market/me`;
         // Use the proxy to avoid CORS issues in the browser
         const result = await proxyLztRequest(url, token);
         // The LZT API can return a 200 OK but with an error message in the body
         if (result && result.errors) {
             return { success: false, error: result.errors.join(', ') };
         }
-        return { success: true };
+        // A successful call to /me returns a `user` object.
+        if (result && result.user) {
+            return { success: true };
+        }
+        return { success: false, error: 'Token seems invalid; no user data returned.' };
     } catch (error: any) {
         // The error message is now more reliably passed from the backend proxy
         const errorMessage = error.message || 'A network error occurred. Check browser console for details.';
